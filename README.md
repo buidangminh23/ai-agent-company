@@ -1,8 +1,6 @@
-# AI Agent Company
+<h1 align="center">AI Agent Company</h1>
 
 ![AI Agent Company: the 3D office with AI agents at their desks](docs/screenshot.png)
-
-**English** · [Tiếng Việt](README.vi.md)
 
 A 3D tabletop office for watching and steering the Claude Code / Claude Desktop, Codex Desktop and Antigravity sessions running on one or more machines. Each agent session is a voxel character seated at a desk for its kind of work. When an agent needs your decision, its character queues at the CEO desk and you approve it right in the browser.
 

@@ -1,8 +1,6 @@
-# AI Agent Company
+<h1 align="center">AI Agent Company</h1>
 
 ![AI Agent Company: văn phòng 3D với các agent AI ngồi đúng bàn](docs/screenshot.png)
-
-[English](README.md) · **Tiếng Việt**
 
 Văn phòng 3D kiểu sa bàn để theo dõi và điều hành các phiên Claude Code / Claude Desktop, Codex Desktop và Antigravity đang chạy trên một hoặc nhiều máy. Mỗi phiên agent là một nhân vật voxel ngồi đúng bàn theo vai việc; khi agent cần bạn quyết định, nhân vật xếp hàng trước bàn CEO và bạn duyệt ngay trên web.
 
