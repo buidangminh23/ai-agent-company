@@ -1,3 +1,4 @@
+import { L, getLang, locale, storeLang } from "../shared/i18n.ts";
 import * as THREE from "three";
 import { CSS2DObject, CSS2DRenderer } from "three/examples/jsm/renderers/CSS2DRenderer.js";
 import { CSS3DObject, CSS3DRenderer } from "three/examples/jsm/renderers/CSS3DRenderer.js";
@@ -25,6 +26,21 @@ import { MeetingDirector } from "./meeting.ts";
 import { CommunicationScene } from "./scene/communication.ts";
 import { pressOptionKey } from "./replies.ts";
 import { pressGuard } from "./press-guard.ts";
+
+document.documentElement.lang = getLang();
+document.getElementById("office-title")!.textContent = L("Văn phòng AI Agent Company");
+document.getElementById("live")!.textContent = L("Đang nối hub…");
+document.getElementById("home")!.setAttribute("aria-label", L("Về góc nhìn gốc"));
+document.getElementById("home")!.title = L("Về toàn cảnh");
+document.getElementById("agent-card")!.setAttribute("aria-label", L("Theo dõi agent"));
+const langToggle = document.getElementById("lang-toggle") as HTMLButtonElement;
+langToggle.textContent = getLang() === "en" ? "VI" : "EN";
+langToggle.title = L("Đổi ngôn ngữ");
+langToggle.setAttribute("aria-label", L("Đổi ngôn ngữ"));
+langToggle.addEventListener("click", () => {
+  storeLang(getLang() === "en" ? "vi" : "en");
+  location.reload();
+});
 
 const FIT_HALF_W = 32.5;
 const FIT_HALF_H = 23.6;
@@ -286,7 +302,7 @@ function renderCard(): void {
   const kind = crewKind(info.id);
   const machineIndex = kind === "ops" && info.id === `${OPS_PREFIX}${info.machine}` ? lastSnap!.machines.findIndex((machine) => machine.id === info.machine) : -1;
   card.classList.toggle("machine-only", machineIndex >= 0);
-  const role = kind === "ops" ? "Vận hành" : kind === "life" ? "Văn phòng" : kind === "staff" && info.role ? ROLE_BY_ID.get(info.role)?.label ?? roleLabel(info) : roleLabel(info);
+  const role = kind === "ops" ? L("Vận hành") : kind === "life" ? L("Văn phòng") : kind === "staff" && info.role ? ROLE_BY_ID.get(info.role)?.label ?? roleLabel(info) : roleLabel(info);
   const children = lastSnap!.agents.filter((agent) => agent.parentId === info.id);
   const parent = lastSnap!.agents.find((agent) => agent.id === info.parentId);
   const machineOnline = lastSnap!.machines.find((machine) => machine.id === info.machine)?.online ?? false;
@@ -298,42 +314,34 @@ function renderCard(): void {
   }
   cardSignature = signature;
   if (machineIndex >= 0) {
-    card.setAttribute("aria-label", `Tình trạng ${info.machine}. Nhấn Escape để đóng.`);
+    card.setAttribute("aria-label", L("Tình trạng {0}. Nhấn Escape để đóng.", info.machine));
     card.dataset.state = connected ? "online" : "offline";
-    card.innerHTML = `<div class="card-machine"><canvas role="img" aria-label="${escapeHtml(info.machine)}: ${escapeHtml(info.detail)}"></canvas></div><button type="button" class="machine-dismiss sr-only" data-action="close">Đóng tình trạng máy</button>`;
+    card.innerHTML = L("<div class=\"card-machine\"><canvas role=\"img\" aria-label=\"{0}: {1}\"></canvas></div><button type=\"button\" class=\"machine-dismiss sr-only\" data-action=\"close\">Đóng tình trạng máy</button>", escapeHtml(info.machine), escapeHtml(info.detail));
     copyMachinePanel(machineIndex);
     return;
   }
-  card.setAttribute("aria-label", `Theo dõi ${APP_NAMES[info.app]} · ${info.project}`);
+  card.setAttribute("aria-label", L("Theo dõi {0} · {1}", APP_NAMES[info.app], info.project));
   const deciding = connected && info.pending?.kind === "decision" && info.state === "idle";
   const pillState = !connected ? "offline" : deciding ? "decision" : info.state;
-  const pillText = replayMode ? "Đang xem lịch sử" : !connected ? "Mất kết nối" : deciding ? "Chờ sếp quyết" : STATE_LABELS[info.state];
+  const pillText = replayMode ? L("Đang xem lịch sử") : !connected ? L("Mất kết nối") : deciding ? L("Chờ sếp quyết") : STATE_LABELS[info.state];
   card.dataset.state = pillState;
-  const heading = kind === "staff" ? "Nhân viên trực" : kind === "ops" ? "Vận hành máy chủ" : kind === "life" ? "Nhân viên văn phòng" : `Theo dõi ${APP_NAMES[info.app]}`;
+  const heading = kind === "staff" ? L("Nhân viên trực") : kind === "ops" ? L("Vận hành máy chủ") : kind === "life" ? L("Nhân viên văn phòng") : L("Theo dõi {0}", APP_NAMES[info.app]);
   const facts = [
-    `<div><dt>${icon("target")}Nhiệm vụ</dt><dd class="card-task" title="${escapeHtml(info.task || info.title)}">${escapeHtml(info.task || info.title)}</dd></div>`,
-    `<div><dt>${icon("machine")}Máy</dt><dd>${escapeHtml(info.machine)}</dd></div>`,
-    info.branch ? `<div><dt>${icon("board")}Nhánh</dt><dd><code>${escapeHtml(info.branch)}</code></dd></div>` : "",
-    children.length ? `<div><dt>${icon("agent")}Subagent</dt><dd>${children.length} đang chạy</dd></div>` : "",
+    L("<div><dt>{0}Nhiệm vụ</dt><dd class=\"card-task\" title=\"{1}\">{2}</dd></div>", icon("target"), escapeHtml(info.task || info.title), escapeHtml(info.task || info.title)),
+    L("<div><dt>{0}Máy</dt><dd>{1}</dd></div>", icon("machine"), escapeHtml(info.machine)),
+    info.branch ? L("<div><dt>{0}Nhánh</dt><dd><code>{1}</code></dd></div>", icon("board"), escapeHtml(info.branch)) : "",
+    children.length ? L("<div><dt>{0}Subagent</dt><dd>{1} đang chạy</dd></div>", icon("agent"), children.length) : "",
   ].join("");
   const chat = kind ? null : safeLink(info.nativeUrl);
-  const actions = kind ? "" : `<section class="card-actions" aria-label="Hành động nhanh"><span class="eyebrow">Hành động nhanh</span><div><button type="button" class="primary" data-action="ops">${icon("grid")}Xem trong bảng điều hành</button>${chat ? `<a href="${escapeHtml(chat)}" target="_blank" rel="noopener noreferrer" title="Mở ứng dụng trên thiết bị đang xem; chat cần có trên thiết bị đó.">${icon("chat")}Mở chat gốc</a>` : ""}<button type="button" data-action="home">${icon("home")}Về toàn cảnh</button></div></section>`;
-  const report = info.progress || info.detail || "Chưa có hoạt động";
+  const actions = kind ? "" : L("<section class=\"card-actions\" aria-label=\"Hành động nhanh\"><span class=\"eyebrow\">Hành động nhanh</span><div><button type=\"button\" class=\"primary\" data-action=\"ops\">{0}Xem trong bảng điều hành</button>{1}<button type=\"button\" data-action=\"home\">{2}Về toàn cảnh</button></div></section>", icon("grid"), chat ? L("<a href=\"{0}\" target=\"_blank\" rel=\"noopener noreferrer\" title=\"Mở ứng dụng trên thiết bị đang xem; chat cần có trên thiết bị đó.\">{1}Mở chat gốc</a>", escapeHtml(chat), icon("chat")) : "", icon("home"));
+  const report = info.progress || info.detail || L("Chưa có hoạt động");
   const tool = info.state !== "idle" && info.progress && info.detail && info.detail !== info.progress ? `<p class="card-tool">${escapeHtml(info.detail)}</p>` : "";
   const focused = card.contains(document.activeElement) ? document.activeElement as HTMLElement : null;
   const focusedAction = focused?.dataset.action;
   const focusedKey = focused?.dataset.key;
   const scroll = card.scrollTop;
-  const reportSection = `<section class="card-section card-report"><span class="eyebrow">${info.state === "idle" ? "Báo cáo mới nhất" : "Tiến độ hiện tại"}</span><div class="md">${renderMarkdown(report)}</div>${tool}</section>`;
-  card.innerHTML = `<header class="card-head"><b>${heading}${info.parentId ? " · subagent" : ""}</b><button class="x" data-action="close" aria-label="Đóng popup">×</button></header>
-<div class="card-profile"><span class="card-avatar" style="--app:${APP_COLORS[info.app]}" aria-hidden="true">${escapeHtml(APP_NAMES[info.app].slice(0, 1))}</span><div class="card-who"><strong>${escapeHtml(info.project)}</strong><small>${escapeHtml(role)} · ${APP_NAMES[info.app]}${info.model ? ` · ${escapeHtml(info.model)}` : ""}</small></div><span class="pill" data-state="${pillState}">${pillText}</span></div>
-${kind ? "" : dashboard.answerMarkup(info, connected)}
-<dl class="card-facts">${facts}</dl>
-${info.recap ? `<section class="card-section card-recap"><span class="eyebrow">Tóm tắt lượt vừa xong</span><p>${escapeHtml(info.recap)}</p></section>` : ""}
-${reportSection}
-${info.parentId ? `<p class="card-parent">Agent cha: ${escapeHtml(parent?.title || "Không có trong phiên theo dõi")}</p>` : ""}
-${actions}
-<footer><time datetime="${escapeHtml(info.updatedAt)}">Cập nhật ${new Date(info.updatedAt).toLocaleString("vi-VN")}</time>${!connected ? "<span class=stale>Dữ liệu lần nhận cuối</span>" : ""}${selected ? "<span>Đã giữ popup · Esc để đóng</span>" : '<button data-action="pin">Giữ popup mở</button>'}</footer>`;
+  const reportSection = `<section class="card-section card-report"><span class="eyebrow">${info.state === "idle" ? L("Báo cáo mới nhất") : L("Tiến độ hiện tại")}</span><div class="md">${renderMarkdown(report)}</div>${tool}</section>`;
+  card.innerHTML = L("<header class=\"card-head\"><b>{0}{1}</b><button class=\"x\" data-action=\"close\" aria-label=\"Đóng popup\">×</button></header>\n<div class=\"card-profile\"><span class=\"card-avatar\" style=\"--app:{2}\" aria-hidden=\"true\">{3}</span><div class=\"card-who\"><strong>{4}</strong><small>{5} · {6}{7}</small></div><span class=\"pill\" data-state=\"{8}\">{9}</span></div>\n{10}\n<dl class=\"card-facts\">{11}</dl>\n{12}\n{13}\n{14}\n{15}\n<footer><time datetime=\"{16}\">Cập nhật {17}</time>{18}{19}</footer>", heading, info.parentId ? " · subagent" : "", APP_COLORS[info.app], escapeHtml(APP_NAMES[info.app].slice(0, 1)), escapeHtml(info.project), escapeHtml(role), APP_NAMES[info.app], info.model ? ` · ${escapeHtml(info.model)}` : "", pillState, pillText, kind ? "" : dashboard.answerMarkup(info, connected), facts, info.recap ? L("<section class=\"card-section card-recap\"><span class=\"eyebrow\">Tóm tắt lượt vừa xong</span><p>{0}</p></section>", escapeHtml(info.recap)) : "", reportSection, info.parentId ? `<p class="card-parent">Agent cha: ${escapeHtml(parent?.title || L("Không có trong phiên theo dõi"))}</p>` : "", actions, escapeHtml(info.updatedAt), new Date(info.updatedAt).toLocaleString(locale()), !connected ? L("<span class=stale>Dữ liệu lần nhận cuối</span>") : "", selected ? L("<span>Đã giữ popup · Esc để đóng</span>") : L("<button data-action=\"pin\">Giữ popup mở</button>"));
   copyMachinePanel(machineIndex);
   card.scrollTop = scroll;
   if (focusedAction) card.querySelector<HTMLButtonElement>(`[data-action="${focusedAction}"]`)?.focus({ preventScroll: true });
@@ -529,11 +537,11 @@ else addEventListener("load", () => {
 setInterval(() => {
   if (!lastSnap) return;
   if (replayMode) {
-    live.textContent = `Lịch sử · ${new Date(lastSnap.generatedAt).toLocaleString("vi-VN")}`;
+    live.textContent = L("Lịch sử · {0}", new Date(lastSnap.generatedAt).toLocaleString(locale()));
     return;
   }
   const age = Math.round((Date.now() - Date.parse(lastSnap.generatedAt)) / 1000);
-  live.textContent = live.dataset.state === "on" ? `Realtime · ${lastSnap.agents.length} agent · cập nhật ${age}s trước` : "Mất kết nối hub, đang nối lại…";
+  live.textContent = live.dataset.state === "on" ? L("Realtime · {0} agent · cập nhật {1}s trước", lastSnap.agents.length, age) : L("Mất kết nối hub, đang nối lại…");
 }, 1000);
 
 const HOVER_DWELL_MS = 2000;

@@ -1,3 +1,4 @@
+import { L } from "../shared/i18n.ts";
 import type { AgentInfo, MachineId } from "../shared/types.ts";
 import type { DispatchList, DispatchReceipt, DispatchStatus, DispatchTarget } from "../shared/dispatch.ts";
 import { uuid } from "./agent-controls.ts";
@@ -11,11 +12,11 @@ const MESSAGE_LIMIT = 4000;
 const CHECK_WINDOW_MS = 10 * 60_000;
 const SETTLED: readonly DispatchStatus[] = ["replied", "failed"];
 const NOT_APPROVAL: Record<AgentInfo["app"], string> = {
-  claude: "Claude nhận như tin từ phiên khác, không tính là sếp duyệt. Cần duyệt thì bấm trong app.",
-  codex: "Codex có thể không tính đây là sếp duyệt. Cần duyệt thì trả lời trong app.",
-  antigravity: "Antigravity có thể không tính đây là sếp duyệt. Cần duyệt thì trả lời trong app.",
+  claude: L("Claude nhận như tin từ phiên khác, không tính là sếp duyệt. Cần duyệt thì bấm trong app."),
+  codex: L("Codex có thể không tính đây là sếp duyệt. Cần duyệt thì trả lời trong app."),
+  antigravity: L("Antigravity có thể không tính đây là sếp duyệt. Cần duyệt thì trả lời trong app."),
 };
-const STATUS_TITLES: Record<DispatchStatus, string> = { queued: "Đang gửi", sending: "Đang gửi", accepted: "Đã chuyển vào chat", delivered: "Đã tới chat", replied: "Agent đã phản hồi", failed: "Chưa gửi được", unknown: "Chưa xác nhận được" };
+const STATUS_TITLES: Record<DispatchStatus, string> = { queued: L("Đang gửi"), sending: L("Đang gửi"), accepted: L("Đã chuyển vào chat"), delivered: L("Đã tới chat"), replied: L("Agent đã phản hồi"), failed: L("Chưa gửi được"), unknown: L("Chưa xác nhận được") };
 
 interface SentAnswer {
   key: string;
@@ -67,13 +68,13 @@ export class DecisionReplies {
   private async load(): Promise<void> {
     try {
       const response = await fetch("/api/communications", { cache: "no-store", signal: AbortSignal.timeout(30_000) });
-      if (!response.ok) throw new Error(response.status === 401 ? "Đăng nhập bằng mã truy cập để gửi từ web." : "Chưa nối được kênh gửi vào chat.");
+      if (!response.ok) throw new Error(response.status === 401 ? L("Đăng nhập bằng mã truy cập để gửi từ web.") : L("Chưa nối được kênh gửi vào chat."));
       const data = await response.json() as DispatchList;
       this.targets = Array.isArray(data?.targets) ? data.targets : [];
       this.error = "";
     } catch (error) {
       this.targets = null;
-      this.error = error instanceof Error ? error.message : "Chưa kiểm tra được kênh gửi vào chat.";
+      this.error = error instanceof Error ? error.message : L("Chưa kiểm tra được kênh gửi vào chat.");
     }
     await Promise.all([...this.sent.values()].filter((item) => this.needsCheck(item)).map((item) => this.check(item)));
     this.changed();
@@ -84,15 +85,15 @@ export class DecisionReplies {
   }
 
   private route(agent: AgentInfo, online: boolean): AnswerRoute {
-    const place = `${APP_LABELS[agent.app]} trên ${agent.machine}`;
-    const fallback = (reason: string): AnswerRoute => ({ send: false, note: `${reason} Bấm để chép rồi dán vào ${place}.` });
-    if (!online) return fallback("Máy đang mất kết nối.");
-    if (agent.pending?.kind !== "decision" || agent.state !== "idle") return fallback("Phiên này chưa nối kênh trả lời trực tiếp: máy chưa cài hook, hoặc phiên mở trước khi cài.");
+    const place = L("{0} trên {1}", APP_LABELS[agent.app], agent.machine);
+    const fallback = (reason: string): AnswerRoute => ({ send: false, note: L("{0} Bấm để chép rồi dán vào {1}.", reason, place) });
+    if (!online) return fallback(L("Máy đang mất kết nối."));
+    if (agent.pending?.kind !== "decision" || agent.state !== "idle") return fallback(L("Phiên này chưa nối kênh trả lời trực tiếp: máy chưa cài hook, hoặc phiên mở trước khi cài."));
     if (this.error) return fallback(this.error);
-    if (!this.targets) return { send: false, checking: true, note: "Đang kiểm tra kênh gửi vào chat. Bấm là gửi ngay khi kiểm tra xong." };
+    if (!this.targets) return { send: false, checking: true, note: L("Đang kiểm tra kênh gửi vào chat. Bấm là gửi ngay khi kiểm tra xong.") };
     const target = this.targets.find((item) => item.agentId === agent.id && item.machine === agent.machine);
-    if (!target) return fallback("Chưa thấy phiên này trong kênh gửi.");
-    return target.available ? { send: true, note: `Gửi thành tin nhắn vào đúng chat. ${NOT_APPROVAL[agent.app]}` } : fallback(`${target.reason}.`.replace(/\.\.$/, "."));
+    if (!target) return fallback(L("Chưa thấy phiên này trong kênh gửi."));
+    return target.available ? { send: true, note: L("Gửi thành tin nhắn vào đúng chat. {0}", NOT_APPROVAL[agent.app]) } : fallback(`${target.reason}.`.replace(/\.\.$/, "."));
   }
 
   markup(agent: AgentInfo, online: boolean, chatHref: string | null = null): string {
@@ -102,12 +103,12 @@ export class DecisionReplies {
     this.rendered.set(key, { agent, online });
     const id = escape(key);
     const sent = this.sent.get(key);
-    if (sent && sent.status !== "failed") return `<section class="cq" data-kind="decision" role="status"><div class="cq-sent"><strong>${escape(STATUS_TITLES[sent.status])}: “${escape(sent.answer)}”</strong><p>${escape(sent.detail)}</p><p>${escape(NOT_APPROVAL[agent.app])}</p>${sent.status === "unknown" ? `<button type="button" class="cq-btn" data-tone="neutral" data-decide-check="${id}" data-key="decide-check:${id}">Kiểm tra biên nhận</button>` : ""}</div></section>`;
+    if (sent && sent.status !== "failed") return `<section class="cq" data-kind="decision" role="status"><div class="cq-sent"><strong>${escape(STATUS_TITLES[sent.status])}: “${escape(sent.answer)}”</strong><p>${escape(sent.detail)}</p><p>${escape(NOT_APPROVAL[agent.app])}</p>${sent.status === "unknown" ? L("<button type=\"button\" class=\"cq-btn\" data-tone=\"neutral\" data-decide-check=\"{0}\" data-key=\"decide-check:{1}\">Kiểm tra biên nhận</button>", id, id) : ""}</div></section>`;
     const route = this.route(agent, online);
     const buttons = pending.options.map((option, index) => `<button type="button" class="cq-btn" data-tone="${index === 0 ? "primary" : "neutral"}" data-decide="${id}" data-decide-index="${index}" data-key="decide:${id}:${index}">${escape(option)}</button>`).join("");
     const draft = this.drafts.get(key) ?? "";
     const notice = this.notices.get(key) ?? (sent ? sent.detail : route.note);
-    return `<section class="cq" data-kind="decision"><p class="cq-question">${escape(pending.question)}</p>${buttons ? `<div class="cq-actions">${buttons}</div>` : ""}<label class="cq-other"><span class="cq-label">${buttons ? "Khác" : "Câu trả lời"}</span><textarea rows="1" maxlength="${MESSAGE_LIMIT}" placeholder="Nhập câu trả lời của sếp…" data-decide-text="${id}" data-key="decide-text:${id}">${escape(draft)}</textarea></label><div class="cq-foot"><small role="status">${escape(notice)}</small><div class="cq-actions">${chatHref ? `<a class="cq-btn" href="${escape(chatHref)}" target="_blank" rel="noopener noreferrer" data-key="decide-chat:${id}">Mở chat gốc</a>` : ""}<button type="button" class="cq-btn" data-tone="neutral" data-decide-custom="${id}" data-key="decide-custom:${id}">${route.send || route.checking ? "Gửi tin nhắn" : "Chép"}</button></div></div></section>`;
+    return L("<section class=\"cq\" data-kind=\"decision\"><p class=\"cq-question\">{0}</p>{1}<label class=\"cq-other\"><span class=\"cq-label\">{2}</span><textarea rows=\"1\" maxlength=\"{3}\" placeholder=\"Nhập câu trả lời của sếp…\" data-decide-text=\"{4}\" data-key=\"decide-text:{5}\">{6}</textarea></label><div class=\"cq-foot\"><small role=\"status\">{7}</small><div class=\"cq-actions\">{8}<button type=\"button\" class=\"cq-btn\" data-tone=\"neutral\" data-decide-custom=\"{9}\" data-key=\"decide-custom:{10}\">{11}</button></div></div></section>", escape(pending.question), buttons ? `<div class="cq-actions">${buttons}</div>` : "", buttons ? L("Khác") : L("Câu trả lời"), MESSAGE_LIMIT, id, id, escape(draft), escape(notice), chatHref ? L("<a class=\"cq-btn\" href=\"{0}\" target=\"_blank\" rel=\"noopener noreferrer\" data-key=\"decide-chat:{1}\">Mở chat gốc</a>", escape(chatHref), id) : "", id, id, route.send || route.checking ? L("Gửi tin nhắn") : L("Chép"));
   }
 
   signature(agent: AgentInfo): string {
@@ -141,7 +142,7 @@ export class DecisionReplies {
     if (!entry?.agent.pending) return true;
     const answer = option ? entry.agent.pending.options[Number(option.dataset.decideIndex)] : (this.drafts.get(key) ?? "").trim();
     if (!answer) {
-      this.notices.set(key, "Nhập câu trả lời trước đã.");
+      this.notices.set(key, L("Nhập câu trả lời trước đã."));
       this.changed();
       return true;
     }
@@ -162,7 +163,7 @@ export class DecisionReplies {
     let route = this.route(agent, online);
     if (route.checking) {
       this.routing.add(key);
-      this.notices.set(key, `Đang kiểm tra kênh gửi cho “${answer}”. Chưa gửi nội dung.`);
+      this.notices.set(key, L("Đang kiểm tra kênh gửi cho “{0}”. Chưa gửi nội dung.", answer));
       this.changed();
       await this.refresh();
       this.routing.delete(key);
@@ -174,11 +175,11 @@ export class DecisionReplies {
         return;
       }
     } else if (!route.send) return this.copy(key, agent, answer);
-    const item: SentAnswer = { key, requestId: uuid(), agentId: agent.id, machine: agent.machine, answer, status: "sending", detail: "Đang gửi vào đúng chat. Không gửi lại trong khi chờ.", at: new Date().toISOString() };
+    const item: SentAnswer = { key, requestId: uuid(), agentId: agent.id, machine: agent.machine, answer, status: "sending", detail: L("Đang gửi vào đúng chat. Không gửi lại trong khi chờ."), at: new Date().toISOString() };
     this.sent.set(key, item);
     if (!this.save()) {
       this.sent.delete(key);
-      this.notices.set(key, "Trình duyệt chưa lưu được mã gửi để chống gửi trùng. Chưa gửi nội dung.");
+      this.notices.set(key, L("Trình duyệt chưa lưu được mã gửi để chống gửi trùng. Chưa gửi nội dung."));
       this.changed();
       return;
     }
@@ -192,19 +193,19 @@ export class DecisionReplies {
         item.detail = result.detail.slice(0, 500);
       } else if (response.status >= 400 && response.status < 500) {
         item.status = "failed";
-        item.detail = typeof result.error === "string" ? result.error.slice(0, 300) : "Yêu cầu bị từ chối trước khi gửi tới agent.";
+        item.detail = typeof result.error === "string" ? result.error.slice(0, 300) : L("Yêu cầu bị từ chối trước khi gửi tới agent.");
       } else throw new Error("no receipt");
     } catch {
       item.status = "unknown";
-      item.detail = "Chưa rõ máy đích đã nhận hay chưa; không gửi lại. Kiểm tra biên nhận hoặc chat gốc.";
+      item.detail = L("Chưa rõ máy đích đã nhận hay chưa; không gửi lại. Kiểm tra biên nhận hoặc chat gốc.");
     }
     this.save();
     this.changed();
   }
 
   private async copy(key: string, agent: AgentInfo, answer: string): Promise<void> {
-    const place = `${APP_LABELS[agent.app]} trên ${agent.machine}`;
-    this.notices.set(key, await copyText(answer) ? `Đã chép “${answer}”. Dán vào ${place} để trả lời.` : `Trình duyệt không cho chép tự động. Gõ “${answer}” trong ${place}.`);
+    const place = L("{0} trên {1}", APP_LABELS[agent.app], agent.machine);
+    this.notices.set(key, await copyText(answer) ? L("Đã chép “{0}”. Dán vào {1} để trả lời.", answer, place) : L("Trình duyệt không cho chép tự động. Gõ “{0}” trong {1}.", answer, place));
     this.changed();
   }
 

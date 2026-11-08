@@ -1,3 +1,4 @@
+import { L } from "../../shared/i18n.ts";
 import type { QuotaRow, QuotaSnapshot, SiteStatus } from "../../shared/types.ts";
 
 const QUOTA_URL = process.env.MSC_QUOTA_URL ?? "http://127.0.0.1:6736/v1/limits";
@@ -19,9 +20,9 @@ export const SITES = parseSites(process.env.MSC_SITES ?? "");
 
 const WINDOW_LABELS: Record<string, string> = {
   session: "5h",
-  weekly: "Tuần",
+  weekly: L("Tuần"),
   claude: "5h",
-  claudeWeekly: "Tuần",
+  claudeWeekly: L("Tuần"),
   fable: "Fable",
 };
 
@@ -74,11 +75,11 @@ export async function readQuota(): Promise<QuotaSnapshot> {
 }
 
 function siteNote(status: number | null): string {
-  if (status === null) return "Không phản hồi";
-  if (status === 530) return "Cloudflare Tunnel không nối được máy chủ";
-  if (status >= 500) return "Lỗi máy chủ";
-  if (status >= 400) return "Lỗi truy cập";
-  return "Hoạt động";
+  if (status === null) return L("Không phản hồi");
+  if (status === 530) return L("Cloudflare Tunnel không nối được máy chủ");
+  if (status >= 500) return L("Lỗi máy chủ");
+  if (status >= 400) return L("Lỗi truy cập");
+  return L("Hoạt động");
 }
 
 export async function checkSite(url: string, label: string): Promise<SiteStatus> {

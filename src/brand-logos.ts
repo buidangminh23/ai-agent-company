@@ -1,3 +1,4 @@
+import { L } from "../shared/i18n.ts";
 import { escapeHtml } from "./markdown.ts";
 
 type Brand = "claudecode" | "claude" | "codex" | "openai" | "github" | "gemini" | "grok" | "kimi" | "qwen" | "deepseek" | "zhipu" | "meta";
@@ -33,7 +34,7 @@ export function brandsOf(...texts: (string | null | undefined)[]): Brand[] {
 }
 
 function mark(brand: Brand | null, size: number): string {
-  if (!brand) return `<span class="pw-brand pw-brand-none" style="--s:${size}px" title="Sản phẩm khác">${PACKAGE}</span>`;
+  if (!brand) return L("<span class=\"pw-brand pw-brand-none\" style=\"--s:{0}px\" title=\"Sản phẩm khác\">{1}</span>", size, PACKAGE);
   return `<img class="pw-brand" src="/brands/${brand}.svg" alt="" width="${size}" height="${size}" style="--s:${size}px" loading="lazy" decoding="async" title="${escapeHtml(LABELS.get(brand) ?? brand)}">`;
 }
 
@@ -44,7 +45,7 @@ export function brandSlot(brands: Brand[]): string {
 
 export function brandChips(brands: Brand[]): string {
   if (!brands.length) return "";
-  return `<ul class="pw-brand-chips" aria-label="Thương hiệu trong đơn">${brands.map((brand) => `<li>${mark(brand, 18)}<span>${escapeHtml(LABELS.get(brand) ?? brand)}</span></li>`).join("")}</ul>`;
+  return L("<ul class=\"pw-brand-chips\" aria-label=\"Thương hiệu trong đơn\">{0}</ul>", brands.map((brand) => `<li>${mark(brand, 18)}<span>${escapeHtml(LABELS.get(brand) ?? brand)}</span></li>`).join(""));
 }
 
 export function brandIcon(brands: Brand[], size = 16): string {

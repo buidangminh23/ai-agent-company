@@ -1,3 +1,4 @@
+import { L, locale } from "../shared/i18n.ts";
 import { escapeHtml } from "./markdown.ts";
 import "./charts.css";
 
@@ -42,14 +43,14 @@ function text(value: unknown): string {
 
 export function compactNumber(value: number): string {
   const abs = Math.abs(value);
-  if (abs >= 1e9) return `${trim(value / 1e9)} tỷ`;
+  if (abs >= 1e9) return L("{0} tỷ", trim(value / 1e9));
   if (abs >= 1e6) return `${trim(value / 1e6)} tr`;
   if (abs >= 1e3) return `${trim(value / 1e3)}K`;
   return trim(value);
 }
 
 function trim(value: number): string {
-  return value.toLocaleString("vi-VN", { maximumFractionDigits: Math.abs(value) < 10 ? 1 : 0 });
+  return value.toLocaleString(locale(), { maximumFractionDigits: Math.abs(value) < 10 ? 1 : 0 });
 }
 
 export function vndCompact(value: number): string {
@@ -57,11 +58,11 @@ export function vndCompact(value: number): string {
 }
 
 export function vndFull(value: number | null): string {
-  return value === null ? "—" : `${Math.round(value).toLocaleString("vi-VN")}₫`;
+  return value === null ? "—" : `${Math.round(value).toLocaleString(locale())}₫`;
 }
 
 export function percent(value: number | null, digits = 1): string {
-  return value === null || !Number.isFinite(value) ? "—" : `${(value * 100).toLocaleString("vi-VN", { maximumFractionDigits: digits })}%`;
+  return value === null || !Number.isFinite(value) ? "—" : `${(value * 100).toLocaleString(locale(), { maximumFractionDigits: digits })}%`;
 }
 
 export function niceTicks(max: number, count = 4): number[] {
@@ -92,7 +93,7 @@ function legend(items: [string, string][]): string {
 }
 
 function tableView(head: string[], rows: string[][]): string {
-  return `<details class="viz-table"><summary>Xem bảng số</summary><div class="ops-table-scroll"><table class="ops-table"><thead><tr>${head.map((cell, index) => `<th${index ? ' class="ops-num"' : ""}>${text(cell)}</th>`).join("")}</tr></thead><tbody>${rows.map((row) => `<tr>${row.map((cell, index) => `<td${index ? ' class="ops-num"' : ""}>${text(cell)}</td>`).join("")}</tr>`).join("")}</tbody></table></div></details>`;
+  return L("<details class=\"viz-table\"><summary>Xem bảng số</summary><div class=\"ops-table-scroll\"><table class=\"ops-table\"><thead><tr>{0}</tr></thead><tbody>{1}</tbody></table></div></details>", head.map((cell, index) => `<th${index ? ' class="ops-num"' : ""}>${text(cell)}</th>`).join(""), rows.map((row) => `<tr>${row.map((cell, index) => `<td${index ? ' class="ops-num"' : ""}>${text(cell)}</td>`).join("")}</tr>`).join(""));
 }
 
 function linePath(values: (number | null)[], top: number): string {
@@ -110,7 +111,7 @@ function linePath(values: (number | null)[], top: number): string {
 }
 
 export function columnChart(points: ColumnPoint[], options: ColumnChartOptions): string {
-  if (!points.length) return `<p class="ops-muted">Chưa có số liệu.</p>`;
+  if (!points.length) return L("<p class=\"ops-muted\">Chưa có số liệu.</p>");
   const overlay = options.overlay ?? [];
   const peak = Math.max(1, ...points.map((point) => point.value), ...overlay.map((value) => value ?? 0));
   const ticks = niceTicks(peak);
@@ -125,7 +126,7 @@ export function columnChart(points: ColumnPoint[], options: ColumnChartOptions):
   const line = overlay.some((value) => value !== null) ? `<svg class="viz-line" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><path d="${linePath(overlay, top)}" vector-effect="non-scaling-stroke"/></svg>` : "";
   const keys: [string, string][] = line ? [["bar", options.series], ["line", options.overlayLabel ?? ""]] : [];
   const rows = points.map((point, index) => [point.label, options.format(point.value), ...(line ? [overlay[index] === null || overlay[index] === undefined ? "—" : options.format(overlay[index]!)] : [])]);
-  return `<figure class="viz" role="img" aria-label="${text(options.title)}">${keys.length ? legend(keys) : ""}<div class="viz-plot" style="--height:${options.height ?? 12}rem">${axis(ticks, compactNumber)}<div class="viz-cols" style="--n:${points.length}">${columns}</div>${line}</div>${xLabels(points.map((point) => point.label), options.maxLabels ?? 8)}${tableView(["Kỳ", options.series, ...(line ? [options.overlayLabel ?? ""] : [])], rows)}</figure>`;
+  return `<figure class="viz" role="img" aria-label="${text(options.title)}">${keys.length ? legend(keys) : ""}<div class="viz-plot" style="--height:${options.height ?? 12}rem">${axis(ticks, compactNumber)}<div class="viz-cols" style="--n:${points.length}">${columns}</div>${line}</div>${xLabels(points.map((point) => point.label), options.maxLabels ?? 8)}${tableView([L("Kỳ"), options.series, ...(line ? [options.overlayLabel ?? ""] : [])], rows)}</figure>`;
 }
 
 function swatchLegend(items: { label: string; color: string }[]): string {
@@ -137,23 +138,23 @@ function segmentStyle(index: number, height: number, colors?: string[]): string 
 }
 
 export function stackedColumns(points: StackPoint[], series: string[], title: string, format: Format, colors?: string[]): string {
-  if (!points.length) return `<p class="ops-muted">Chưa có số liệu.</p>`;
+  if (!points.length) return L("<p class=\"ops-muted\">Chưa có số liệu.</p>");
   const peak = Math.max(1, ...points.map((point) => point.parts.reduce((sum, part) => sum + part, 0)));
   const ticks = niceTicks(peak);
   const top = ticks[ticks.length - 1];
   const columns = points.map((point) => {
     const total = point.parts.reduce((sum, part) => sum + part, 0);
-    const tip = `${point.label}: ${series.map((name, index) => `${name} ${format(point.parts[index])}`).join(" · ")} · Tổng ${format(total)}`;
+    const tip = L("{0}: {1} · Tổng {2}", point.label, series.map((name, index) => `${name} ${format(point.parts[index])}`).join(" · "), format(total));
     const segments = point.parts.map((part, index) => (part ? `<b${segmentStyle(index, (part / top) * 100, colors)}></b>` : "")).join("");
     return `<span class="viz-col viz-stack" data-tip="${text(tip)}">${segments}</span>`;
   }).join("");
   const rows = points.map((point) => [point.label, ...point.parts.map(format), format(point.parts.reduce((sum, part) => sum + part, 0))]);
   const keys = colors ? swatchLegend(series.map((label, index) => ({ label, color: colors[index] }))) : legend(series.map((name, index) => [`slot${index + 1}`, name]));
-  return `<figure class="viz" role="img" aria-label="${text(title)}">${keys}<div class="viz-plot" style="--height:12rem">${axis(ticks, compactNumber)}<div class="viz-cols" style="--n:${points.length}">${columns}</div></div>${xLabels(points.map((point) => point.label), 12)}${tableView(["Kỳ", ...series, "Tổng"], rows)}</figure>`;
+  return `<figure class="viz" role="img" aria-label="${text(title)}">${keys}<div class="viz-plot" style="--height:12rem">${axis(ticks, compactNumber)}<div class="viz-cols" style="--n:${points.length}">${columns}</div></div>${xLabels(points.map((point) => point.label), 12)}${tableView([L("Kỳ"), ...series, L("Tổng")], rows)}</figure>`;
 }
 
 export function groupedColumns(points: StackPoint[], series: string[], title: string, format: Format, colors: string[]): string {
-  if (!points.length) return `<p class="ops-muted">Chưa có số liệu.</p>`;
+  if (!points.length) return L("<p class=\"ops-muted\">Chưa có số liệu.</p>");
   const peak = Math.max(1, ...points.flatMap((point) => point.parts));
   const ticks = niceTicks(peak);
   const top = ticks[ticks.length - 1];
@@ -163,7 +164,7 @@ export function groupedColumns(points: StackPoint[], series: string[], title: st
     return `<span class="viz-col viz-group" data-tip="${text(tip)}" style="--k:${series.length}">${bars}</span>`;
   }).join("");
   const rows = points.map((point) => [point.label, ...point.parts.map(format)]);
-  return `<figure class="viz" role="img" aria-label="${text(title)}">${swatchLegend(series.map((label, index) => ({ label, color: colors[index] })))}<div class="viz-plot" style="--height:12rem">${axis(ticks, compactNumber)}<div class="viz-cols" style="--n:${points.length}">${columns}</div></div>${xLabels(points.map((point) => point.label), 12)}${tableView(["Kỳ", ...series], rows)}</figure>`;
+  return `<figure class="viz" role="img" aria-label="${text(title)}">${swatchLegend(series.map((label, index) => ({ label, color: colors[index] })))}<div class="viz-plot" style="--height:12rem">${axis(ticks, compactNumber)}<div class="viz-cols" style="--n:${points.length}">${columns}</div></div>${xLabels(points.map((point) => point.label), 12)}${tableView([L("Kỳ"), ...series], rows)}</figure>`;
 }
 
 export interface DonutPart {
@@ -183,7 +184,7 @@ export interface DonutOptions {
 export function donut(parts: DonutPart[], options: DonutOptions): string {
   const visible = parts.filter((part) => part.value > 0);
   const total = visible.reduce((sum, part) => sum + part.value, 0);
-  if (!total) return `<p class="ops-muted">${text(options.empty ?? "Chưa có số liệu.")}</p>`;
+  if (!total) return `<p class="ops-muted">${text(options.empty ?? L("Chưa có số liệu."))}</p>`;
   const gap = visible.length > 1 ? 0.6 : 0;
   let offset = 0;
   const arcs = visible.map((part) => {
@@ -193,7 +194,7 @@ export function donut(parts: DonutPart[], options: DonutOptions): string {
     return arc;
   }).join("");
   const items = visible.map((part) => `<li><i style="background:${part.color}" aria-hidden="true"></i><span class="viz-donut-label">${text(part.label)}</span><strong>${percent(part.value / total)}</strong><small>${text(options.format(part.value))}</small></li>`).join("");
-  return `<figure class="viz viz-donut"><figcaption class="pw-sr">${text(`${options.title}: tổng ${options.center} ${options.caption}`)}</figcaption><div class="viz-donut-ring" aria-hidden="true"><svg viewBox="0 0 42 42"><circle class="viz-arc-track" cx="21" cy="21" r="15.9155"/>${arcs}</svg><span class="viz-donut-center"><strong>${text(options.center)}</strong><small>${text(options.caption)}</small></span></div><ul class="viz-donut-legend">${items}</ul></figure>`;
+  return `<figure class="viz viz-donut"><figcaption class="pw-sr">${text(L("{0}: tổng {1} {2}", options.title, options.center, options.caption))}</figcaption><div class="viz-donut-ring" aria-hidden="true"><svg viewBox="0 0 42 42"><circle class="viz-arc-track" cx="21" cy="21" r="15.9155"/>${arcs}</svg><span class="viz-donut-center"><strong>${text(options.center)}</strong><small>${text(options.caption)}</small></span></div><ul class="viz-donut-legend">${items}</ul></figure>`;
 }
 
 export type Tone = "blue" | "green" | "violet" | "amber" | "red" | "teal";
@@ -225,7 +226,7 @@ function areaSpark(values: number[]): string {
 
 export function kpiCards(cards: KpiCard[]): string {
   return `<div class="kpi-cards" data-count="${cards.length}">${cards.map((card) => {
-    const hint = card.hint ? `<button type="button" class="kpi-hint" aria-label="Giải thích ${text(card.label)}"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg><span class="kpi-tip" role="tooltip">${text(card.hint)}</span></button>` : "";
+    const hint = card.hint ? L("<button type=\"button\" class=\"kpi-hint\" aria-label=\"Giải thích {0}\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"10\"/><path d=\"M12 16v-4M12 8h.01\"/></svg><span class=\"kpi-tip\" role=\"tooltip\">{1}</span></button>", text(card.label), text(card.hint)) : "";
     const delta = card.delta ? `<p class="kpi-delta" data-tone="${card.delta.tone}"><b>${text(card.delta.value)}</b> ${text(card.delta.versus)}</p>` : "";
     const note = card.note ? `<p class="kpi-note">${text(card.note)}</p>` : "";
     return `<article class="kpi-card" data-tone="${card.tone}"><header><span class="kpi-icon">${card.icon}</span><h3>${text(card.label)}</h3>${hint}</header><strong class="kpi-value" title="${text(card.value)}">${text(card.value)}</strong>${delta}${note}${card.spark ? areaSpark(card.spark) : ""}</article>`;
@@ -234,7 +235,7 @@ export function kpiCards(cards: KpiCard[]): string {
 
 export function heatmap(matrix: number[][], rows: string[], columns: string[], title: string, unit: string): string {
   const max = Math.max(0, ...matrix.flat());
-  if (!max) return `<p class="ops-muted">Chưa đủ đơn để vẽ bản đồ nhiệt.</p>`;
+  if (!max) return L("<p class=\"ops-muted\">Chưa đủ đơn để vẽ bản đồ nhiệt.</p>");
   const cells = matrix.map((row, r) => `<span class="viz-heat-row">${text(rows[r])}</span>${row.map((value, c) => {
     const step = value ? Math.min(SEQUENTIAL.length - 1, Math.floor((value / max) * (SEQUENTIAL.length - 1))) : -1;
     return `<span class="viz-cell" data-tip="${text(`${rows[r]} ${columns[c]}: ${value} ${unit}`)}"${step < 0 ? " data-empty" : ` style="--c:${SEQUENTIAL[step]}"`}></span>`;
@@ -244,7 +245,7 @@ export function heatmap(matrix: number[][], rows: string[], columns: string[], t
   return `<figure class="viz" role="img" aria-label="${text(title)}"><div class="viz-heat" style="--cols:${columns.length}">${head}${cells}</div>${ramp}${tableView(["", ...columns], matrix.map((row, r) => [rows[r], ...row.map(String)]))}</figure>`;
 }
 
-export function rankBars(rows: RankRow[], format: Format, empty = "Chưa có số liệu."): string {
+export function rankBars(rows: RankRow[], format: Format, empty = L("Chưa có số liệu.")): string {
   if (!rows.length) return `<p class="ops-muted">${text(empty)}</p>`;
   const max = Math.max(1, ...rows.map((row) => row.value));
   return `<ol class="viz-rank">${rows.map((row) => `<li data-tip="${text(`${row.label}: ${format(row.value)}${row.note ? ` · ${row.note}` : ""}`)}"><span class="viz-rank-head"><span class="viz-rank-label" title="${text(row.label)}">${row.icon ?? ""}${text(row.label)}</span><span class="viz-rank-value">${text(format(row.value))}${row.note ? `<small>${text(row.note)}</small>` : ""}</span></span><span class="viz-rank-bar" aria-hidden="true"><b style="--w:${(row.value / max) * 100}%"></b></span></li>`).join("")}</ol>`;
@@ -255,13 +256,13 @@ export function funnel(steps: { label: string; value: number | null }[], title: 
   return `<figure class="viz" role="img" aria-label="${text(title)}"><ol class="viz-funnel">${steps.map((step, index) => {
     const previous = index ? steps[index - 1].value : null;
     const rate = step.value !== null && previous ? step.value / previous : null;
-    return `<li data-tip="${text(`${step.label}: ${step.value ?? "—"}${rate !== null ? ` · ${percent(rate)} so với bước trước` : ""}`)}"><span class="viz-funnel-label">${text(step.label)}</span><span class="viz-funnel-value">${step.value === null ? "—" : step.value.toLocaleString("vi-VN")}<small>${index ? `${percent(rate)} so với bước trước` : "điểm bắt đầu"}</small></span><span class="viz-funnel-bar"><b style="--w:${((step.value ?? 0) / max) * 100}%;--c:${ORDINAL[Math.min(index, ORDINAL.length - 1)]}"></b></span></li>`;
+    return `<li data-tip="${text(`${step.label}: ${step.value ?? "—"}${rate !== null ? L(" · {0} so với bước trước", percent(rate)) : ""}`)}"><span class="viz-funnel-label">${text(step.label)}</span><span class="viz-funnel-value">${step.value === null ? "—" : step.value.toLocaleString(locale())}<small>${index ? L("{0} so với bước trước", percent(rate)) : L("điểm bắt đầu")}</small></span><span class="viz-funnel-bar"><b style="--w:${((step.value ?? 0) / max) * 100}%;--c:${ORDINAL[Math.min(index, ORDINAL.length - 1)]}"></b></span></li>`;
   }).join("")}</ol></figure>`;
 }
 
 export function shareBar(parts: { label: string; value: number }[], title: string, format: Format): string {
   const total = parts.reduce((sum, part) => sum + part.value, 0);
-  if (!total) return `<p class="ops-muted">Chưa có số liệu.</p>`;
+  if (!total) return L("<p class=\"ops-muted\">Chưa có số liệu.</p>");
   const visible = parts.filter((part) => part.value > 0);
   return `<figure class="viz" role="img" aria-label="${text(title)}"><div class="viz-share">${visible.map((part, index) => `<b data-slot="${Math.min(index + 1, 3)}" data-tip="${text(`${part.label}: ${format(part.value)} · ${percent(part.value / total)}`)}" style="flex:${part.value}"></b>`).join("")}</div><ul class="viz-legend">${visible.map((part, index) => `<li><i data-key="slot${Math.min(index + 1, 3)}" aria-hidden="true"></i>${text(part.label)} <strong>${percent(part.value / total, 0)}</strong></li>`).join("")}</ul></figure>`;
 }
@@ -287,10 +288,10 @@ export function statTiles(tiles: StatTile[]): string {
 }
 
 export function deltaNote(change: number | null, versus: string): { note: string; tone: "up" | "down" | "flat" } {
-  if (change === null) return { note: `chưa có số ${versus} để so`, tone: "flat" };
+  if (change === null) return { note: L("chưa có số {0} để so", versus), tone: "flat" };
   const rounded = Math.round(change * 100);
-  if (!rounded) return { note: `không đổi so với ${versus}`, tone: "flat" };
-  return { note: `${rounded > 0 ? "▲" : "▼"} ${Math.abs(rounded)}% so với ${versus}`, tone: rounded > 0 ? "up" : "down" };
+  if (!rounded) return { note: L("không đổi so với {0}", versus), tone: "flat" };
+  return { note: L("{0} {1}% so với {2}", rounded > 0 ? "▲" : "▼", Math.abs(rounded), versus), tone: rounded > 0 ? "up" : "down" };
 }
 
 export function attachTooltip(root: HTMLElement): void {

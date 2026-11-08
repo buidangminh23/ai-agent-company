@@ -1,3 +1,4 @@
+import { L } from "../shared/i18n.ts";
 import type { AgentInfo, MachineId, Snapshot } from "../shared/types.ts";
 import type { InboxSnapshot } from "../shared/inbox.ts";
 import { eventsToday } from "./inbox-views.ts";
@@ -28,23 +29,23 @@ interface RoomLink {
 }
 
 const NAV: [Destination, string, keyof typeof ICONS][] = [
-  ["office", "Văn phòng", "home"],
-  ["overview", "Tổng quan", "grid"],
+  ["office", L("Văn phòng"), "home"],
+  ["overview", L("Tổng quan"), "grid"],
   ["github", "GitHub", "git"],
-  ["projects", "Công việc", "board"],
-  ["mail", "Thư", "mail"],
-  ["calendar", "Lịch", "calendar"],
-  ["automation", "Hệ thống", "auto"],
-  ["quota", "Hạn mức AI", "gauge"],
+  ["projects", L("Công việc"), "board"],
+  ["mail", L("Thư"), "mail"],
+  ["calendar", L("Lịch"), "calendar"],
+  ["automation", L("Hệ thống"), "auto"],
+  ["quota", L("Hạn mức AI"), "gauge"],
 ];
 const ROOMS: RoomLink[] = [
   { zone: "room2", label: "WORKSTATION", icon: "machine", machine: "WORKSTATION", count: (agents) => busyOn(agents, "WORKSTATION") },
   { zone: "room3", label: "LAPTOP", icon: "machine", machine: "LAPTOP", count: (agents) => busyOn(agents, "LAPTOP") },
   { zone: "room1", label: "SERVER", icon: "machine", machine: "SERVER", count: (agents) => busyOn(agents, "SERVER") },
-  { zone: "training", label: "Phòng đào tạo", icon: "agent", count: (agents) => agents.filter((a) => a.state !== "idle" && trainingFocus(a)).length },
-  { zone: "meeting", label: "Phòng họp", icon: "chat", count: () => 0 },
-  { zone: "server", label: "Phòng máy chủ", icon: "project", count: () => 0 },
-  { zone: "general", label: "Văn phòng chung", icon: "target", count: () => 0 },
+  { zone: "training", label: L("Phòng đào tạo"), icon: "agent", count: (agents) => agents.filter((a) => a.state !== "idle" && trainingFocus(a)).length },
+  { zone: "meeting", label: L("Phòng họp"), icon: "chat", count: () => 0 },
+  { zone: "server", label: L("Phòng máy chủ"), icon: "project", count: () => 0 },
+  { zone: "general", label: L("Văn phòng chung"), icon: "target", count: () => 0 },
 ];
 const APP_LABELS: Record<string, string> = { claude: "Claude", codex: "Codex", antigravity: "Antigravity" };
 const QUOTA_ACCOUNTS = 6;
@@ -100,12 +101,12 @@ export class OfficeHud {
   constructor(private readonly callbacks: HudCallbacks) {
     document.body.classList.add("hud-on");
     this.rail.className = "hud-rail";
-    this.rail.setAttribute("aria-label", "Điều hướng văn phòng");
+    this.rail.setAttribute("aria-label", L("Điều hướng văn phòng"));
     const nav = NAV.map(([id, label, name]) => `<button type="button" data-go="${id}" aria-current="${id === "office"}" title="${label}">${icon(name)}<span class="hud-rail-label">${label}</span><span class="hud-count" data-count-for="${id}" hidden></span></button>`).join("");
-    const rooms = ROOMS.map((room) => `<button type="button" data-room="${room.zone}" title="Đi tới ${room.label}">${icon(room.icon)}<span class="hud-rail-label">${room.label}</span>${room.machine ? `<span class="hud-room-dot" data-dot-for="${room.zone}" role="img" aria-label="Chưa có dữ liệu máy"></span>` : ""}<span class="hud-count" data-room-count="${room.zone}" hidden></span></button>`).join("");
-    this.rail.innerHTML = `${nav}<p class="hud-rail-heading">Phòng</p>${rooms}`;
+    const rooms = ROOMS.map((room) => L("<button type=\"button\" data-room=\"{0}\" title=\"Đi tới {1}\">{2}<span class=\"hud-rail-label\">{3}</span>{4}<span class=\"hud-count\" data-room-count=\"{5}\" hidden></span></button>", room.zone, room.label, icon(room.icon), room.label, room.machine ? L("<span class=\"hud-room-dot\" data-dot-for=\"{0}\" role=\"img\" aria-label=\"Chưa có dữ liệu máy\"></span>", room.zone) : "", room.zone)).join("");
+    this.rail.innerHTML = L("{0}<p class=\"hud-rail-heading\">Phòng</p>{1}", nav, rooms);
     this.strip.className = "hud-strip";
-    this.strip.setAttribute("aria-label", "Số liệu điều hành");
+    this.strip.setAttribute("aria-label", L("Số liệu điều hành"));
     this.strip.innerHTML = `<div class="hud-cards"></div>`;
     this.cards = this.strip.querySelector(".hud-cards")!;
     const brand = document.querySelector(".brand");
@@ -203,12 +204,12 @@ export class OfficeHud {
       badge.textContent = String(value);
       badge.hidden = value === 0;
       badge.dataset.tone = "neutral";
-      badge.title = `${value} agent đang làm`;
+      badge.title = L("{0} agent đang làm", value);
       if (!room.machine) continue;
       const online = snapshot.machines.find((machine) => machine.id === room.machine)?.online ?? false;
       const dot = this.rail.querySelector<HTMLElement>(`[data-dot-for="${room.zone}"]`)!;
       dot.dataset.online = String(online);
-      dot.setAttribute("aria-label", online ? "Máy đang kết nối" : "Máy mất kết nối");
+      dot.setAttribute("aria-label", online ? L("Máy đang kết nối") : L("Máy mất kết nối"));
     }
   }
 
@@ -217,14 +218,14 @@ export class OfficeHud {
     const totals = QUOTA_APPS.map((app) => [app, agents.filter((agent) => agent.app === app).length] as const);
     const label = totals.map(([app, total]) => `${APP_LABELS[app]} ${total}`).join(", ");
     const mascots = totals.map(([app, total]) => `<span class="hud-mascot" data-empty="${total === 0}"><img src="${mascotPortrait(app)}" alt="" width="40" height="40"><strong>${total}</strong><small>${APP_LABELS[app]}</small></span>`).join("");
-    return `<button type="button" class="hud-card" data-open="overview" aria-label="Agent AI: ${label}. Mở tổng quan"><span class="hud-card-title">Agent AI<span class="hud-total">${agents.length} agent</span></span><span class="hud-mascots">${mascots}</span></button>`;
+    return L("<button type=\"button\" class=\"hud-card\" data-open=\"overview\" aria-label=\"Agent AI: {0}. Mở tổng quan\"><span class=\"hud-card-title\">Agent AI<span class=\"hud-total\">{1} agent</span></span><span class=\"hud-mascots\">{2}</span></button>", label, agents.length, mascots);
   }
 
   private tasksCard(): string {
     const counts = todoCounts(this.todos, vietnamDay(Date.now()));
-    const items: [string, number, string][] = [["blue", counts.todo, "Cần làm"], ["green", counts.doing, "Đang làm"], ["amber", counts.overdue, "Quá hạn"], ["gray", counts.doneToday, "Xong hôm nay"]];
+    const items: [string, number, string][] = [["blue", counts.todo, L("Cần làm")], ["green", counts.doing, L("Đang làm")], ["amber", counts.overdue, L("Quá hạn")], ["gray", counts.doneToday, L("Xong hôm nay")]];
     const label = items.map(([, value, name]) => `${value} ${name.toLowerCase()}`).join(", ");
-    return `<button type="button" class="hud-card" data-open="projects" aria-label="Việc cá nhân: ${label}. Mở bảng công việc"><span class="hud-card-title">Việc cá nhân</span><span class="hud-stages">${items.map(([tone, value, name]) => `<span class="hud-stage" data-tone="${tone}"><strong>${value}</strong><small>${name}</small></span>`).join("")}</span></button>`;
+    return L("<button type=\"button\" class=\"hud-card\" data-open=\"projects\" aria-label=\"Việc cá nhân: {0}. Mở bảng công việc\"><span class=\"hud-card-title\">Việc cá nhân</span><span class=\"hud-stages\">{1}</span></button>", label, items.map(([tone, value, name]) => `<span class="hud-stage" data-tone="${tone}"><strong>${value}</strong><small>${name}</small></span>`).join(""));
   }
 
   private quotaRows(): QuotaWindow[] {
@@ -234,7 +235,7 @@ export class OfficeHud {
 
   private quotaCard(): string {
     const groups = quotaAccounts(this.quotaRows());
-    if (!groups.length) return `<button type="button" class="hud-card" data-open="quota"><span class="hud-card-title">Hạn mức AI</span><span class="hud-empty">Chưa nối Quota Control</span></button>`;
+    if (!groups.length) return L("<button type=\"button\" class=\"hud-card\" data-open=\"quota\"><span class=\"hud-card-title\">Hạn mức AI</span><span class=\"hud-empty\">Chưa nối Quota Control</span></button>");
     const shown = groups.slice(0, QUOTA_ACCOUNTS);
     const more = groups.length - shown.length;
     const accounts = shown.map(({ app, account, windows }) => {
@@ -242,7 +243,7 @@ export class OfficeHud {
       const rows = windows.map((row) => `<span class="hud-window"><small><span class="hud-long">${text(row.window)}</span><span class="hud-short">${text(WINDOW_SHORT[row.window] ?? row.window)}</span></small><strong data-tone="${quotaTone(row.remaining)}">${Math.round(row.remaining)}%</strong></span>`).join("");
       return `<span class="hud-account" title="${text(APP_LABELS[app] ?? app)} · ${text(account)} · ${text(summary)}"><span class="hud-account-head"><img src="/logos/${text(app)}.svg" alt="${text(APP_LABELS[app] ?? app)}" width="12" height="12"><span class="hud-account-name">${text(accountName(account))}</span></span><span class="hud-windows">${rows}</span></span>`;
     }).join("");
-    return `<button type="button" class="hud-card" data-open="quota" aria-label="Hạn mức AI của ${groups.length} tài khoản. Mở hạn mức"><span class="hud-card-title">Hạn mức AI${more ? `<span class="hud-total">+${more} tài khoản</span>` : ""}</span><span class="hud-accounts">${accounts}</span></button>`;
+    return L("<button type=\"button\" class=\"hud-card\" data-open=\"quota\" aria-label=\"Hạn mức AI của {0} tài khoản. Mở hạn mức\"><span class=\"hud-card-title\">Hạn mức AI{1}</span><span class=\"hud-accounts\">{2}</span></button>", groups.length, more ? L("<span class=\"hud-total\">+{0} tài khoản</span>", more) : "", accounts);
   }
 
   private systemCard(): string {
@@ -251,11 +252,11 @@ export class OfficeHud {
     const healthy = sites.filter((site) => site.ok).length;
     const failing = this.operations?.attention.filter((item) => item.kind === "failure").length ?? 0;
     const checks: [boolean, string][] = [
-      [online === machines.length, `${online}/${machines.length} máy kết nối`],
-      [healthy === sites.length, `${healthy}/${sites.length} website hoạt động`],
-      [failing === 0, failing ? `${failing} lỗi cần xem` : "Không có lỗi"],
+      [online === machines.length, L("{0}/{1} máy kết nối", online, machines.length)],
+      [healthy === sites.length, L("{0}/{1} website hoạt động", healthy, sites.length)],
+      [failing === 0, failing ? L("{0} lỗi cần xem", failing) : L("Không có lỗi")],
     ];
     const ok = checks.every(([pass]) => pass);
-    return `<button type="button" class="hud-card" data-open="overview" aria-label="Trạng thái hệ thống: ${ok ? "ổn định" : "cần chú ý"}"><span class="hud-card-title">Trạng thái hệ thống<span class="hud-tag" data-tone="${ok ? "green" : "amber"}">${ok ? "Ổn định" : "Cần chú ý"}</span></span><span class="hud-checks">${checks.map(([pass, label]) => `<span data-pass="${pass}">${icon(pass ? "check" : "warn")}${text(label)}</span>`).join("")}</span></button>`;
+    return L("<button type=\"button\" class=\"hud-card\" data-open=\"overview\" aria-label=\"Trạng thái hệ thống: {0}\"><span class=\"hud-card-title\">Trạng thái hệ thống<span class=\"hud-tag\" data-tone=\"{1}\">{2}</span></span><span class=\"hud-checks\">{3}</span></button>", ok ? L("ổn định") : L("cần chú ý"), ok ? "green" : "amber", ok ? L("Ổn định") : L("Cần chú ý"), checks.map(([pass, label]) => `<span data-pass="${pass}">${icon(pass ? "check" : "warn")}${text(label)}</span>`).join(""));
   }
 }

@@ -1,3 +1,4 @@
+import { L } from "../../shared/i18n.ts";
 import { randomUUID } from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
@@ -18,7 +19,7 @@ export interface LocalEvent {
 
 export type LocalEventInput = Pick<LocalEvent, "title" | "start" | "end" | "allDay" | "location" | "description">;
 
-export const LOCAL_CALENDAR = "Lịch trên hub";
+export const LOCAL_CALENDAR = L("Lịch trên hub");
 export const LOCAL_PREFIX = "local:";
 const DAY_MS = 86_400_000;
 const MAX_SPAN_MS = 366 * DAY_MS;
@@ -27,25 +28,25 @@ const MAX_EVENTS = 2000;
 export class LocalEventError extends Error {}
 
 function limitText(value: unknown, max: number, field: string, required = false): string {
-  if (typeof value !== "string") throw new LocalEventError(`${field} không hợp lệ`);
+  if (typeof value !== "string") throw new LocalEventError(L("{0} không hợp lệ", field));
   const trimmed = value.trim();
-  if (required && !trimmed) throw new LocalEventError(`Cần nhập ${field.toLowerCase()}`);
-  if (trimmed.length > max) throw new LocalEventError(`${field} dài quá ${max} ký tự`);
+  if (required && !trimmed) throw new LocalEventError(L("Cần nhập {0}", field.toLowerCase()));
+  if (trimmed.length > max) throw new LocalEventError(L("{0} dài quá {1} ký tự", field, max));
   return trimmed;
 }
 
 export function validateInput(raw: unknown): LocalEventInput {
-  if (!raw || typeof raw !== "object") throw new LocalEventError("Dữ liệu sự kiện không hợp lệ");
+  if (!raw || typeof raw !== "object") throw new LocalEventError(L("Dữ liệu sự kiện không hợp lệ"));
   const data = raw as Record<string, unknown>;
-  const title = limitText(data.title, 200, "Tiêu đề", true);
-  const location = limitText(data.location ?? "", 300, "Địa điểm");
-  const description = limitText(data.description ?? "", 5000, "Nội dung");
+  const title = limitText(data.title, 200, L("Tiêu đề"), true);
+  const location = limitText(data.location ?? "", 300, L("Địa điểm"));
+  const description = limitText(data.description ?? "", 5000, L("Nội dung"));
   const allDay = data.allDay === true;
   const start = typeof data.start === "string" ? Date.parse(data.start) : NaN;
   const end = typeof data.end === "string" ? Date.parse(data.end) : NaN;
-  if (!Number.isFinite(start) || !Number.isFinite(end)) throw new LocalEventError("Thời gian không hợp lệ");
-  if (end <= start) throw new LocalEventError("Giờ kết thúc phải sau giờ bắt đầu");
-  if (end - start > MAX_SPAN_MS) throw new LocalEventError("Sự kiện dài quá 1 năm");
+  if (!Number.isFinite(start) || !Number.isFinite(end)) throw new LocalEventError(L("Thời gian không hợp lệ"));
+  if (end <= start) throw new LocalEventError(L("Giờ kết thúc phải sau giờ bắt đầu"));
+  if (end - start > MAX_SPAN_MS) throw new LocalEventError(L("Sự kiện dài quá 1 năm"));
   return { title, start: new Date(start).toISOString(), end: new Date(end).toISOString(), allDay, location, description };
 }
 
@@ -85,7 +86,7 @@ export class LocalEventStore {
 
   create(input: LocalEventInput, now = Date.now()): LocalEvent {
     const events = this.load();
-    if (events.length >= MAX_EVENTS) throw new LocalEventError(`Đã đủ ${MAX_EVENTS} sự kiện trên hub`);
+    if (events.length >= MAX_EVENTS) throw new LocalEventError(L("Đã đủ {0} sự kiện trên hub", MAX_EVENTS));
     const stamp = new Date(now).toISOString();
     const event: LocalEvent = { id: randomUUID(), ...input, createdAt: stamp, updatedAt: stamp };
     this.save([...events, event]);

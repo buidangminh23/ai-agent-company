@@ -1,3 +1,4 @@
+import { L } from "../../shared/i18n.ts";
 import * as THREE from "three";
 import { createMascot, poseMascotSeated, reachMascotHand, resetMascotHands, type Mascot } from "./mascots.ts";
 import { reducedMotion } from "../motion.ts";
@@ -12,12 +13,12 @@ export const DRINK_BAR_CYCLE = DRINK_BAR_STAGES.reduce((sum, entry) => sum + ent
 export const DRINK_BAR_FOOTPRINT = { x0: -2.2, x1: 2.2, z0: -1.5, z1: 2.55 };
 export const DRINK_BAR_MENU = [
   { id: "espresso", label: "Espresso", family: "coffee", brewSeconds: 6, color: 0x6b4124 },
-  { id: "orange", label: "Nước cam", family: "cold", brewSeconds: 12, color: 0xf4a62a },
+  { id: "orange", label: L("Nước cam"), family: "cold", brewSeconds: 12, color: 0xf4a62a },
   { id: "matcha-latte", label: "Matcha latte", family: "matcha", brewSeconds: 36, color: 0x91b755 },
-  { id: "latte", label: "Caffè latte", family: "coffee", brewSeconds: 10, color: 0xc99a6d },
+  { id: "latte", label: L("Caffè latte"), family: "coffee", brewSeconds: 10, color: 0xc99a6d },
   { id: "cappuccino", label: "Cappuccino", family: "coffee", brewSeconds: 10, color: 0xb3855d },
   { id: "americano", label: "Americano", family: "coffee", brewSeconds: 8, color: 0x593b29 },
-  { id: "lemon-tea", label: "Trà chanh", family: "cold", brewSeconds: 12, color: 0xc58b32 },
+  { id: "lemon-tea", label: L("Trà chanh"), family: "cold", brewSeconds: 12, color: 0xc58b32 },
 ] as const;
 export type DrinkRecipe = typeof DRINK_BAR_MENU[number]["id"];
 export const MATCHA_LATTE_METHOD = { matchaGrams: 3, waterMl: 100, waterCelsius: 80, whiskSeconds: 15, milkMl: 100 } as const;
@@ -672,8 +673,8 @@ export function createDrinkBar(parent: THREE.Object3D, centerX: number, centerZ:
     }
     receipt.visible = ["order", "prepare", "brew", "serve"].includes(sample.stage);
     root.userData.drinkBar = sample;
-    const labels: Record<DrinkBarStage, string> = { approach: "MỜI GỌI MÓN", order: "NHẬN ORDER", prepare: "CHUẨN BỊ", brew: "ĐANG PHA", serve: "MỜI NHẬN ĐỒ", carry: "CHÚC NGON MIỆNG", drink: "THƯỞNG THỨC", return: "TRẢ LY", drop: "CẢM ƠN", leave: "DỌN LY" };
-    const recipeLabels: Record<string, string> = { sift: "RÂY MATCHA 3G", water: isMatcha ? "THÊM NƯỚC 80°C" : "THÊM NƯỚC", "whisk-setup": "LẤY CHỔI TRE", whisk: "ĐÁNH MATCHA", "whisk-rest": "ĐẶT CHỔI", transfer: "RÓT MATCHA", milk: "RÓT SỮA", finish: "HOÀN THIỆN", juice: "VẮT CAM", steep: "Ủ TRÀ", shake: "LẮC ĐỀU", pour: "RÓT RA LY", extract: "CHIẾT XUẤT" };
+    const labels: Record<DrinkBarStage, string> = { approach: L("MỜI GỌI MÓN"), order: L("NHẬN ORDER"), prepare: L("CHUẨN BỊ"), brew: L("ĐANG PHA"), serve: L("MỜI NHẬN ĐỒ"), carry: L("CHÚC NGON MIỆNG"), drink: L("THƯỞNG THỨC"), return: L("TRẢ LY"), drop: L("CẢM ƠN"), leave: L("DỌN LY") };
+    const recipeLabels: Record<string, string> = { sift: L("RÂY MATCHA 3G"), water: isMatcha ? L("THÊM NƯỚC 80°C") : L("THÊM NƯỚC"), "whisk-setup": L("LẤY CHỔI TRE"), whisk: L("ĐÁNH MATCHA"), "whisk-rest": L("ĐẶT CHỔI"), transfer: L("RÓT MATCHA"), milk: L("RÓT SỮA"), finish: L("HOÀN THIỆN"), juice: L("VẮT CAM"), steep: L("Ủ TRÀ"), shake: L("LẮC ĐỀU"), pour: L("RÓT RA LY"), extract: L("CHIẾT XUẤT") };
     const status = `${sample.stage === "brew" ? recipeLabels[sample.recipeStep] ?? labels.brew : labels[sample.stage]} · ${recipe.label.toLocaleUpperCase("vi")}`;
     if (statusCanvas && statusTexture && status !== lastStatus) {
       const context = statusCanvas.getContext("2d")!;

@@ -1,3 +1,4 @@
+import { L } from "../../shared/i18n.ts";
 import * as THREE from "three";
 import { mergeGeometries, mergeVertices } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { ROLES } from "../../shared/roles.ts";
@@ -309,7 +310,7 @@ function buildCeo(root: THREE.Group, panels: Panels): CeoAnimator {
   const massage = massageChair(root, CEO_DESK.x - 4.35, CEO_DESK.z - 0.9);
   deskLamp(root, CEO_DESK.x + 2.65, 0.82, CEO_DESK.z + 0.38, -0.4);
   credenza(root, CEO_DESK.x, CEO_DESK.z - 2.55, 3.2);
-  const plate = canvasPlate("CEO", 2.0, 0.5, { size: 0.5, sub: "GIÁM ĐỐC" });
+  const plate = canvasPlate("CEO", 2.0, 0.5, { size: 0.5, sub: L("GIÁM ĐỐC") });
   plate.position.set(CEO_DESK.x, 0.49, CEO_DESK.z + 0.88);
   plate.rotation.x = -0.08;
   root.add(plate);
@@ -398,7 +399,7 @@ function buildMeeting(root: THREE.Object3D, panels: Panels): THREE.Group {
   conferenceTable(root, cx, room.tableZ, room.len);
   const head = ergonomicChair(root, room.head.x, room.head.z, room.head.facing);
   head.traverse((part) => { if ((part as THREE.Mesh).isMesh) part.userData.keep = true; });
-  const plate = canvasPlate("CHỦ TRÌ", 0.62, 0.17, { size: 0.6 });
+  const plate = canvasPlate(L("CHỦ TRÌ"), 0.62, 0.17, { size: 0.6 });
   plate.position.set(room.head.x - 0.78, 0.9, room.tableZ + 0.6);
   root.add(plate);
   mountScreen(root, "meeting", "meeting", panels.meeting.material, { x: cx, y: 1.1, z: -22.9, w: 6.2, h: 2.1 });
@@ -511,7 +512,7 @@ function buildGeneral(root: THREE.Object3D): void {
     plant(root, px, 6.7, 1.1, true);
     plant(root, px, 16.3, 1.1, true);
   }
-  htmlLabel(root, `<div class="general-sign"><b>VĂN PHÒNG CHUNG</b><span>KHÔNG GIAN LÀM VIỆC CHUNG TOÀN CÔNG TY</span></div>`, "anchor", 0, 2.6, 6.5);
+  htmlLabel(root, L("<div class=\"general-sign\"><b>VĂN PHÒNG CHUNG</b><span>KHÔNG GIAN LÀM VIỆC CHUNG TOÀN CÔNG TY</span></div>"), "anchor", 0, 2.6, 6.5);
 }
 
 function buildCommon(root: THREE.Object3D) {

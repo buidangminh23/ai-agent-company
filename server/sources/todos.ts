@@ -1,3 +1,4 @@
+import { L } from "../../shared/i18n.ts";
 import { randomUUID } from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
@@ -16,31 +17,31 @@ export interface TodoPatch extends Partial<TodoFields> {
 }
 
 function limitText(value: unknown, max: number, field: string, required = false): string {
-  if (typeof value !== "string") throw new TodoError(`${field} không hợp lệ`);
+  if (typeof value !== "string") throw new TodoError(L("{0} không hợp lệ", field));
   const trimmed = value.trim();
-  if (required && !trimmed) throw new TodoError(`Cần nhập ${field.toLowerCase()}`);
-  if (trimmed.length > max) throw new TodoError(`${field} dài quá ${max} ký tự`);
+  if (required && !trimmed) throw new TodoError(L("Cần nhập {0}", field.toLowerCase()));
+  if (trimmed.length > max) throw new TodoError(L("{0} dài quá {1} ký tự", field, max));
   return trimmed;
 }
 
 function readFields(data: Record<string, unknown>, partial: boolean): Partial<TodoFields> {
   const fields: Partial<TodoFields> = {};
-  if (!partial || data.title !== undefined) fields.title = limitText(data.title, TODO_LIMITS.title, "Tên việc", true);
-  if (data.note !== undefined) fields.note = limitText(data.note, TODO_LIMITS.note, "Ghi chú");
-  if (data.project !== undefined) fields.project = limitText(data.project, TODO_LIMITS.project, "Dự án");
+  if (!partial || data.title !== undefined) fields.title = limitText(data.title, TODO_LIMITS.title, L("Tên việc"), true);
+  if (data.note !== undefined) fields.note = limitText(data.note, TODO_LIMITS.note, L("Ghi chú"));
+  if (data.project !== undefined) fields.project = limitText(data.project, TODO_LIMITS.project, L("Dự án"));
   if (data.priority !== undefined) {
-    if (!PRIORITIES.includes(data.priority as TodoPriority)) throw new TodoError("Mức ưu tiên không hợp lệ");
+    if (!PRIORITIES.includes(data.priority as TodoPriority)) throw new TodoError(L("Mức ưu tiên không hợp lệ"));
     fields.priority = data.priority as TodoPriority;
   }
   if (data.due !== undefined) {
-    if (data.due !== null && data.due !== "" && !isDateKey(data.due)) throw new TodoError("Hạn chót không hợp lệ");
+    if (data.due !== null && data.due !== "" && !isDateKey(data.due)) throw new TodoError(L("Hạn chót không hợp lệ"));
     fields.due = data.due ? (data.due as string) : null;
   }
   return fields;
 }
 
 function asObject(raw: unknown): Record<string, unknown> {
-  if (!raw || typeof raw !== "object" || Array.isArray(raw)) throw new TodoError("Dữ liệu công việc không hợp lệ");
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) throw new TodoError(L("Dữ liệu công việc không hợp lệ"));
   return raw as Record<string, unknown>;
 }
 
@@ -53,14 +54,14 @@ export function validatePatch(raw: unknown): TodoPatch {
   const data = asObject(raw);
   const patch: TodoPatch = readFields(data, true);
   if (data.status !== undefined) {
-    if (!STATUSES.includes(data.status as TodoStatus)) throw new TodoError("Trạng thái không hợp lệ");
+    if (!STATUSES.includes(data.status as TodoStatus)) throw new TodoError(L("Trạng thái không hợp lệ"));
     patch.status = data.status as TodoStatus;
   }
   if (data.index !== undefined) {
-    if (!Number.isInteger(data.index) || (data.index as number) < 0) throw new TodoError("Vị trí không hợp lệ");
+    if (!Number.isInteger(data.index) || (data.index as number) < 0) throw new TodoError(L("Vị trí không hợp lệ"));
     patch.index = data.index as number;
   }
-  if (!Object.keys(patch).length) throw new TodoError("Không có gì để cập nhật");
+  if (!Object.keys(patch).length) throw new TodoError(L("Không có gì để cập nhật"));
   return patch;
 }
 
@@ -98,7 +99,7 @@ export class TodoStore {
 
   create(fields: TodoFields, now = Date.now()): Todo {
     const todos = this.load();
-    if (todos.length >= MAX_TODOS) throw new TodoError(`Đã đủ ${MAX_TODOS} việc, xoá bớt việc đã xong trước`);
+    if (todos.length >= MAX_TODOS) throw new TodoError(L("Đã đủ {0} việc, xoá bớt việc đã xong trước", MAX_TODOS));
     const stamp = new Date(now).toISOString();
     const todo: Todo = { id: randomUUID(), ...fields, status: "todo", order: -1, createdAt: stamp, updatedAt: stamp, doneAt: null };
     this.save(moveTodo([...todos, todo], todo.id, "todo", 0, stamp));

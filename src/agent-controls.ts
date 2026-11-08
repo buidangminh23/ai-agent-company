@@ -1,3 +1,4 @@
+import { L } from "../shared/i18n.ts";
 import type { AgentInfo, MachineId } from "../shared/types.ts";
 import type { AgentControlState, ControlAction, ControlCapability, ControlList, ControlReceipt, ControlSettingsChange } from "../shared/controls.ts";
 import { escapeHtml as escape } from "./markdown.ts";
@@ -5,8 +6,8 @@ import { escapeHtml as escape } from "./markdown.ts";
 const STORAGE_KEY = "msc-control-receipts";
 const APP_LABELS = { claude: "Claude", codex: "Codex", antigravity: "Antigravity" };
 const STALE_PENDING_MS = 90_000;
-const STALE_DETAIL = "Không tìm thấy biên nhận trên máy đích; kiểm tra trong ứng dụng gốc trước khi thao tác lại";
-const CAPABILITY_LABELS: [keyof Pick<AgentControlState, "approvals" | "questions" | "send" | "stop" | "settings">, string][] = [["approvals", "Duyệt quyền"], ["questions", "Trả lời câu hỏi"], ["send", "Gửi lệnh mới"], ["stop", "Dừng lượt"], ["settings", "Đổi model / mức suy nghĩ"]];
+const STALE_DETAIL = L("Không tìm thấy biên nhận trên máy đích; kiểm tra trong ứng dụng gốc trước khi thao tác lại");
+const CAPABILITY_LABELS: [keyof Pick<AgentControlState, "approvals" | "questions" | "send" | "stop" | "settings">, string][] = [["approvals", L("Duyệt quyền")], ["questions", L("Trả lời câu hỏi")], ["send", L("Gửi lệnh mới")], ["stop", L("Dừng lượt")], ["settings", L("Đổi model / mức suy nghĩ")]];
 
 interface LocalControl {
   requestId: string;
@@ -58,14 +59,14 @@ export class AgentControls {
     this.loading = true;
     try {
       const response = await fetch("/api/agent-controls", { cache: "no-store", signal: AbortSignal.timeout(45_000) });
-      if (!response.ok) throw new Error(response.status === 401 ? "Đăng nhập bằng mã truy cập để điều khiển agent." : "Chưa nối được kênh điều khiển agent.");
+      if (!response.ok) throw new Error(response.status === 401 ? L("Đăng nhập bằng mã truy cập để điều khiển agent.") : L("Chưa nối được kênh điều khiển agent."));
       const data = await response.json() as ControlList;
-      if (!data || !Array.isArray(data.agents)) throw new Error("Dữ liệu điều khiển không hợp lệ.");
+      if (!data || !Array.isArray(data.agents)) throw new Error(L("Dữ liệu điều khiển không hợp lệ."));
       this.data = data;
       this.error = "";
     } catch (error) {
       this.data = null;
-      this.error = error instanceof Error ? error.message : "Chưa kiểm tra được khả năng điều khiển.";
+      this.error = error instanceof Error ? error.message : L("Chưa kiểm tra được khả năng điều khiển.");
     } finally {
       this.loading = false;
       this.changed();
@@ -91,26 +92,26 @@ export class AgentControls {
     const key = controlKey(agent.id, agent.machine);
     const state = this.state(agent);
     const receipts = [...this.receipts.values()].filter((receipt) => receipt.agentId === agent.id && receipt.machine === agent.machine).slice(-2);
-    const receiptMarkup = receipts.map((receipt) => `<div class="ops-control-status" role="status" data-state="${receipt.status}"><strong>${receipt.action === "stop" ? "Dừng lượt" : "Đổi model / mức suy nghĩ"} · ${receipt.status === "done" ? "Đã áp dụng" : receipt.status === "rejected" ? "Không áp dụng" : receipt.status === "pending" ? "Đang gửi" : "Chưa xác nhận"}</strong><p>${escape(receipt.detail)}</p>${receipt.status === "pending" || receipt.status === "unknown" ? `<button type="button" data-control-receipt="${escape(receipt.requestId)}" data-key="control-receipt:${escape(receipt.requestId)}">Kiểm tra biên nhận</button>` : ""}</div>`).join("");
+    const receiptMarkup = receipts.map((receipt) => `<div class="ops-control-status" role="status" data-state="${receipt.status}"><strong>${receipt.action === "stop" ? L("Dừng lượt") : L("Đổi model / mức suy nghĩ")} · ${receipt.status === "done" ? L("Đã áp dụng") : receipt.status === "rejected" ? L("Không áp dụng") : receipt.status === "pending" ? L("Đang gửi") : L("Chưa xác nhận")}</strong><p>${escape(receipt.detail)}</p>${receipt.status === "pending" || receipt.status === "unknown" ? L("<button type=\"button\" data-control-receipt=\"{0}\" data-key=\"control-receipt:{1}\">Kiểm tra biên nhận</button>", escape(receipt.requestId), escape(receipt.requestId)) : ""}</div>`).join("");
     const error = this.errors.has(key) ? `<p class="ops-reply-error" role="alert">${escape(this.errors.get(key)!)}</p>` : "";
-    if (!state) return this.error || receiptMarkup ? `<section class="ops-controls" aria-label="Điều khiển ${APP_LABELS[agent.app]}">${this.error ? `<p class="ops-source-note">${escape(this.error)}</p>` : ""}${receiptMarkup}${error}</section>` : "";
+    if (!state) return this.error || receiptMarkup ? L("<section class=\"ops-controls\" aria-label=\"Điều khiển {0}\">{1}{2}{3}</section>", APP_LABELS[agent.app], this.error ? `<p class="ops-source-note">${escape(this.error)}</p>` : "", receiptMarkup, error) : "";
     const busy = (action: ControlAction) => receipts.some((receipt) => receipt.action === action && receipt.status === "pending");
     const id = escape(key);
     let stop = "";
     if (state.stop.available) {
       stop = this.confirming.has(key)
-        ? `<div class="ops-control-confirm" role="group" aria-label="Xác nhận dừng lượt"><p>${escape(state.stop.warning || "Dừng lượt đang chạy của agent.")}</p><div class="ops-control-buttons"><button type="button" data-tone="stop" data-control-stop-confirm="${id}" data-key="control-stop-confirm:${id}" ${busy("stop") ? "disabled" : ""}>Xác nhận dừng</button><button type="button" data-control-stop-cancel="${id}" data-key="control-stop-cancel:${id}">Huỷ</button></div></div>`
-        : `<button type="button" class="ops-control-stop" data-tone="stop" data-control-stop="${id}" data-key="control-stop:${id}" ${busy("stop") ? "disabled" : ""}>${busy("stop") ? "Đang dừng…" : "Dừng lượt"}</button>`;
+        ? L("<div class=\"ops-control-confirm\" role=\"group\" aria-label=\"Xác nhận dừng lượt\"><p>{0}</p><div class=\"ops-control-buttons\"><button type=\"button\" data-tone=\"stop\" data-control-stop-confirm=\"{1}\" data-key=\"control-stop-confirm:{2}\" {3}>Xác nhận dừng</button><button type=\"button\" data-control-stop-cancel=\"{4}\" data-key=\"control-stop-cancel:{5}\">Huỷ</button></div></div>", escape(state.stop.warning || L("Dừng lượt đang chạy của agent.")), id, id, busy("stop") ? "disabled" : "", id, id)
+        : `<button type="button" class="ops-control-stop" data-tone="stop" data-control-stop="${id}" data-key="control-stop:${id}" ${busy("stop") ? "disabled" : ""}>${busy("stop") ? L("Đang dừng…") : L("Dừng lượt")}</button>`;
     }
     let settings = "";
     if (state.settings.available && state.settings.models.length) {
       const selection = this.selection(key, state);
       const model = state.settings.models.find((item) => item.id === selection.model);
-      const current = [state.settings.models.find((item) => item.id === state.settings.model)?.label ?? state.settings.model, state.settings.effort].filter(Boolean).join(" · ") || "Chưa đọc được";
-      settings = `<div class="ops-control-settings"><p class="ops-control-current">Hiện tại: <strong>${escape(current)}</strong></p><div class="ops-control-fields"><label>Model<select data-control-model="${id}" data-key="control-model:${id}">${state.settings.models.map((item) => `<option value="${escape(item.id)}" ${item.id === selection.model ? "selected" : ""}>${escape(item.label || item.id)}</option>`).join("")}</select></label>${model?.efforts.length ? `<label>Mức suy nghĩ<select data-control-effort="${id}" data-key="control-effort:${id}">${model.efforts.map((effort) => `<option value="${escape(effort)}" ${effort === selection.effort ? "selected" : ""}>${escape(effort)}</option>`).join("")}</select></label>` : ""}</div><button type="button" data-control-apply="${id}" data-key="control-apply:${id}" ${busy("settings") ? "disabled" : ""}>Áp dụng cho lượt sau</button></div>`;
+      const current = [state.settings.models.find((item) => item.id === state.settings.model)?.label ?? state.settings.model, state.settings.effort].filter(Boolean).join(" · ") || L("Chưa đọc được");
+      settings = L("<div class=\"ops-control-settings\"><p class=\"ops-control-current\">Hiện tại: <strong>{0}</strong></p><div class=\"ops-control-fields\"><label>Model<select data-control-model=\"{1}\" data-key=\"control-model:{2}\">{3}</select></label>{4}</div><button type=\"button\" data-control-apply=\"{5}\" data-key=\"control-apply:{6}\" {7}>Áp dụng cho lượt sau</button></div>", escape(current), id, id, state.settings.models.map((item) => `<option value="${escape(item.id)}" ${item.id === selection.model ? "selected" : ""}>${escape(item.label || item.id)}</option>`).join(""), model?.efforts.length ? L("<label>Mức suy nghĩ<select data-control-effort=\"{0}\" data-key=\"control-effort:{1}\">{2}</select></label>", id, id, model.efforts.map((effort) => `<option value="${escape(effort)}" ${effort === selection.effort ? "selected" : ""}>${escape(effort)}</option>`).join("")) : "", id, id, busy("settings") ? "disabled" : "");
     }
     const limits = CAPABILITY_LABELS.filter(([name]) => !(state[name] as ControlCapability).available && (state[name] as ControlCapability).reason).map(([name, label]) => `<li><b>${label}:</b> ${escape((state[name] as ControlCapability).reason)}</li>`).join("");
-    return `<section class="ops-controls" aria-label="Điều khiển ${APP_LABELS[state.app] ?? APP_LABELS[agent.app]}" data-agent-controls="${id}"><header class="ops-control-head"><strong>Điều khiển ${APP_LABELS[state.app] ?? APP_LABELS[agent.app]}</strong><small>${escape(state.machine)} · Thao tác của sếp từ web</small></header>${stop}${settings}${limits ? `<ul class="ops-control-limits">${limits}</ul>` : ""}${receiptMarkup}${error}</section>`;
+    return L("<section class=\"ops-controls\" aria-label=\"Điều khiển {0}\" data-agent-controls=\"{1}\"><header class=\"ops-control-head\"><strong>Điều khiển {2}</strong><small>{3} · Thao tác của sếp từ web</small></header>{4}{5}{6}{7}{8}</section>", APP_LABELS[state.app] ?? APP_LABELS[agent.app], id, APP_LABELS[state.app] ?? APP_LABELS[agent.app], escape(state.machine), stop, settings, limits ? `<ul class="ops-control-limits">${limits}</ul>` : "", receiptMarkup, error);
   }
 
   private selection(key: string, state: AgentControlState): { model: string; effort: string } {
@@ -178,7 +179,7 @@ export class AgentControls {
       if (!state.settings.available) return;
       const selection = this.selection(key, state);
       if (selection.model === state.settings.model && selection.effort === (state.settings.effort ?? "")) {
-        this.errors.set(key, "Model và mức suy nghĩ đang đúng như đã chọn; chưa gửi gì.");
+        this.errors.set(key, L("Model và mức suy nghĩ đang đúng như đã chọn; chưa gửi gì."));
         this.changed();
         return;
       }
@@ -186,11 +187,11 @@ export class AgentControls {
     }
     const requestId = uuid();
     const body = JSON.stringify({ requestId, agentId: state.agentId, machine: state.machine, action, ...(settings ? { settings } : {}) });
-    const receipt: LocalControl = { requestId, agentId: state.agentId, machine: state.machine, action, status: "pending", createdAt: new Date().toISOString(), detail: action === "stop" ? "Đang gửi lệnh dừng. Không gửi lại trong khi kiểm tra." : "Đang gửi thiết lập cho lượt sau. Không gửi lại trong khi kiểm tra." };
+    const receipt: LocalControl = { requestId, agentId: state.agentId, machine: state.machine, action, status: "pending", createdAt: new Date().toISOString(), detail: action === "stop" ? L("Đang gửi lệnh dừng. Không gửi lại trong khi kiểm tra.") : L("Đang gửi thiết lập cho lượt sau. Không gửi lại trong khi kiểm tra.") };
     this.receipts.set(requestId, receipt);
     if (!this.save()) {
       this.receipts.delete(requestId);
-      this.errors.set(key, "Không lưu được biên nhận trong trình duyệt. Bật lưu trữ trang rồi thử lại; chưa gửi lệnh.");
+      this.errors.set(key, L("Không lưu được biên nhận trong trình duyệt. Bật lưu trữ trang rồi thử lại; chưa gửi lệnh."));
       this.changed();
       return;
     }
@@ -201,15 +202,15 @@ export class AgentControls {
       const response = await fetch("/api/agent-controls", { method: "POST", headers: { "content-type": "application/json", "x-msc-control": "human-web" }, body, signal: AbortSignal.timeout(40_000) });
       if (!response.ok) {
         const failure = await response.json().catch(() => null) as { error?: unknown } | null;
-        throw new Error(typeof failure?.error === "string" ? `${failure.error.slice(0, 300)}. Kiểm tra biên nhận hoặc ứng dụng gốc; không gửi lại.` : "Chưa xác nhận được kết quả. Kiểm tra biên nhận hoặc ứng dụng gốc; không gửi lại.");
+        throw new Error(typeof failure?.error === "string" ? L("{0}. Kiểm tra biên nhận hoặc ứng dụng gốc; không gửi lại.", failure.error.slice(0, 300)) : L("Chưa xác nhận được kết quả. Kiểm tra biên nhận hoặc ứng dụng gốc; không gửi lại."));
       }
       const result = await response.json() as ControlReceipt;
-      if (result?.requestId?.toLowerCase() !== requestId || result.agentId !== state.agentId || result.action !== action || !["pending", "done", "rejected", "unknown"].includes(result.status)) throw new Error("Biên nhận không khớp; kiểm tra ứng dụng gốc, không gửi lại.");
+      if (result?.requestId?.toLowerCase() !== requestId || result.agentId !== state.agentId || result.action !== action || !["pending", "done", "rejected", "unknown"].includes(result.status)) throw new Error(L("Biên nhận không khớp; kiểm tra ứng dụng gốc, không gửi lại."));
       receipt.status = result.status;
       receipt.detail = typeof result.detail === "string" ? result.detail.slice(0, 500) : receipt.detail;
     } catch (error) {
       receipt.status = "unknown";
-      receipt.detail = error instanceof Error && error.name !== "TimeoutError" && error.name !== "AbortError" && error.message.includes("không gửi lại") ? error.message : "Chưa xác nhận được kết quả; không gửi lại. Kiểm tra biên nhận hoặc ứng dụng gốc.";
+      receipt.detail = error instanceof Error && error.name !== "TimeoutError" && error.name !== "AbortError" && /không gửi lại|do not resend|not resending/i.test(error.message) ? error.message : L("Chưa xác nhận được kết quả; không gửi lại. Kiểm tra biên nhận hoặc ứng dụng gốc.");
     } finally {
       this.sending.delete(requestId);
     }
@@ -232,9 +233,9 @@ export class AgentControls {
       } else if (result === null && this.stale(receipt)) {
         receipt.status = "unknown";
         receipt.detail = STALE_DETAIL;
-      } else receipt.detail = "Chưa tìm thấy biên nhận trên máy đích. Kiểm tra ứng dụng gốc; không gửi lại khi chưa xác minh.";
+      } else receipt.detail = L("Chưa tìm thấy biên nhận trên máy đích. Kiểm tra ứng dụng gốc; không gửi lại khi chưa xác minh.");
     } catch {
-      receipt.detail = "Chưa kết nối được nơi lưu biên nhận; kiểm tra ứng dụng gốc. Không gửi lại.";
+      receipt.detail = L("Chưa kết nối được nơi lưu biên nhận; kiểm tra ứng dụng gốc. Không gửi lại.");
     } finally {
       this.checking.delete(requestId);
     }

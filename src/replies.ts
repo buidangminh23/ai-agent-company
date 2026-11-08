@@ -1,3 +1,4 @@
+import { L } from "../shared/i18n.ts";
 import type { AgentInfo, MachineId } from "../shared/types.ts";
 import type { ReplyField, ReplyKind, ReplyList, ReplyQuestion, ReplyReceipt } from "../shared/replies.ts";
 import { escapeHtml as escape, renderMarkdown } from "./markdown.ts";
@@ -23,7 +24,7 @@ const STOP_DECISIONS = new Set(["deny-stop", "cancel"]);
 const SETTLE_MS = 60_000;
 const AWAIT_MS = 12_000;
 const SEEN_LIMIT = 200;
-const STOP_WARNINGS: Record<string, string> = { cancel: "Từ chối và dừng lượt: Codex Desktop tự từ chối mọi yêu cầu duyệt và gửi câu trả lời trống cho mọi câu hỏi khác đang chờ trong chat này.", "deny-stop": "Từ chối và dừng lượt: Claude dừng ngay lượt đang chạy." };
+const STOP_WARNINGS: Record<string, string> = { cancel: L("Từ chối và dừng lượt: Codex Desktop tự từ chối mọi yêu cầu duyệt và gửi câu trả lời trống cho mọi câu hỏi khác đang chờ trong chat này."), "deny-stop": L("Từ chối và dừng lượt: Claude dừng ngay lượt đang chạy.") };
 
 interface LocalReply {
   requestId: string;
@@ -70,13 +71,13 @@ export class ReplyControls {
     const run = ++this.runs;
     try {
       const response = await fetch("/api/reply-questions", { cache: "no-store", signal: AbortSignal.timeout(45_000) });
-      if (!response.ok) throw new Error(response.status === 401 ? "Đăng nhập bằng mã truy cập để trả lời trực tiếp." : "Chưa nối được kênh trả lời trực tiếp.");
+      if (!response.ok) throw new Error(response.status === 401 ? L("Đăng nhập bằng mã truy cập để trả lời trực tiếp.") : L("Chưa nối được kênh trả lời trực tiếp."));
       this.data = await response.json();
       this.checkedRun = run;
       this.error = "";
     } catch (error) {
       this.data = null;
-      this.error = error instanceof Error ? error.message : "Chưa kiểm tra được câu hỏi gốc.";
+      this.error = error instanceof Error ? error.message : L("Chưa kiểm tra được câu hỏi gốc.");
     } finally {
       this.loading = false;
       this.changed();
@@ -105,11 +106,11 @@ export class ReplyControls {
     if (!enabled) return "";
     const questions = this.data?.questions.filter((question) => question.agentId === agent.id) ?? [];
     const receipts = [...this.receipts.values()].filter((receipt) => receipt.agentId === agent.id).slice(-2);
-    const receiptMarkup = receipts.map((receipt) => `<div class="ops-reply-status cq-status" role="status"><strong>${receipt.status === "answered" ? receipt.kind === "approval" ? "Đã gửi quyết định" : receipt.kind === "plan" ? "Đã gửi yêu cầu sửa kế hoạch" : "Đã trả lời" : receipt.status === "rejected" ? "Chưa gửi" : "Đang xác minh kết quả"}</strong><p>${escape(receipt.detail)}</p>${receipt.status === "pending" || receipt.status === "unknown" ? `<button type="button" class="cq-btn" data-tone="neutral" data-reply-receipt="${escape(receipt.questionId)}">Kiểm tra biên nhận</button>` : ""}</div>`).join("");
+    const receiptMarkup = receipts.map((receipt) => `<div class="ops-reply-status cq-status" role="status"><strong>${receipt.status === "answered" ? receipt.kind === "approval" ? L("Đã gửi quyết định") : receipt.kind === "plan" ? L("Đã gửi yêu cầu sửa kế hoạch") : L("Đã trả lời") : receipt.status === "rejected" ? L("Chưa gửi") : L("Đang xác minh kết quả")}</strong><p>${escape(receipt.detail)}</p>${receipt.status === "pending" || receipt.status === "unknown" ? L("<button type=\"button\" class=\"cq-btn\" data-tone=\"neutral\" data-reply-receipt=\"{0}\">Kiểm tra biên nhận</button>", escape(receipt.questionId)) : ""}</div>`).join("");
     if (questions.length) return receiptMarkup + questions.filter((question) => !this.receipts.has(question.id) || this.receipts.get(question.id)?.status === "rejected").map((question) => this.questionMarkup(question)).join("");
     if (!agent.pending || agent.pending.kind === "decision" || this.settling(agent)) return receiptMarkup;
-    if (this.awaiting(agent)) return receiptMarkup + `<p class="ops-source-note" role="status">Đang lấy câu hỏi từ phiên này…</p>`;
-    const note = this.error || this.data?.unavailable.find((item) => item.agentId === agent.id && item.machine === agent.machine)?.reason || "Chưa có câu hỏi native được xác minh để gửi trực tiếp.";
+    if (this.awaiting(agent)) return receiptMarkup + L("<p class=\"ops-source-note\" role=\"status\">Đang lấy câu hỏi từ phiên này…</p>");
+    const note = this.error || this.data?.unavailable.find((item) => item.agentId === agent.id && item.machine === agent.machine)?.reason || L("Chưa có câu hỏi native được xác minh để gửi trực tiếp.");
     return receiptMarkup + `<p class="ops-source-note">${escape(note)}</p>`;
   }
 
@@ -129,18 +130,18 @@ export class ReplyControls {
   }
 
   private questionMarkup(question: ReplyQuestion): string {
-    const header = `<header class="cq-head"><strong>${escape(question.title || (question.kind === "approval" ? "Yêu cầu cấp quyền" : question.kind === "plan" ? "Kế hoạch chờ duyệt" : "Câu hỏi đang chờ"))}</strong><small>${APP_LABELS[question.app]} · ${escape(question.machine)}</small></header>`;
+    const header = `<header class="cq-head"><strong>${escape(question.title || (question.kind === "approval" ? L("Yêu cầu cấp quyền") : question.kind === "plan" ? L("Kế hoạch chờ duyệt") : L("Câu hỏi đang chờ")))}</strong><small>${APP_LABELS[question.app]} · ${escape(question.machine)}</small></header>`;
     const error = this.errors.has(question.id) ? `<p class="ops-reply-error" role="alert">${escape(this.errors.get(question.id)!)}</p>` : "";
     if (question.kind === "question") {
       const fields = `<div class="cq-fields">${question.fields.map((field) => this.fieldMarkup(question, field)).join("")}</div>`;
-      return `<div class="cq" data-kind="question">${header}${fields}<div class="cq-foot"><small>Ai trả lời trước (web hoặc app) sẽ được áp dụng.</small><button type="button" class="cq-btn" data-tone="primary" data-reply-send="${escape(question.id)}" data-key="reply-send:${escape(question.id)}">Gửi câu trả lời</button></div>${error}</div>`;
+      return L("<div class=\"cq\" data-kind=\"question\">{0}{1}<div class=\"cq-foot\"><small>Ai trả lời trước (web hoặc app) sẽ được áp dụng.</small><button type=\"button\" class=\"cq-btn\" data-tone=\"primary\" data-reply-send=\"{2}\" data-key=\"reply-send:{3}\">Gửi câu trả lời</button></div>{4}</div>", header, fields, escape(question.id), escape(question.id), error);
     }
     const decision = this.decisionField(question);
     const extras = question.fields.filter((field) => field !== decision).map((field) => this.textMarkup(question, field)).join("");
     const pendingStop = decision && this.confirming.get(question.id);
-    const buttons = decision && pendingStop && decision.options.includes(pendingStop) ? `<div class="ops-control-confirm" role="group" aria-label="Xác nhận ${escape(decision.labels?.[pendingStop] ?? pendingStop)}"><p>${escape(STOP_WARNINGS[pendingStop] ?? "Từ chối và dừng lượt đang chạy.")}</p><div class="cq-actions"><button type="button" class="cq-btn" data-tone="stop" data-reply-confirm="${escape(question.id)}" data-reply-value="${escape(pendingStop)}" data-key="reply-confirm:${escape(question.id)}">Xác nhận</button><button type="button" class="cq-btn" data-tone="neutral" data-reply-cancel="${escape(question.id)}" data-key="reply-cancel:${escape(question.id)}">Huỷ</button></div></div>` : decision ? `<div class="cq-actions" role="group" aria-label="${question.kind === "plan" ? "Phản hồi kế hoạch" : "Quyết định cấp quyền"}">${decision.options.map((option, index) => `<button type="button" class="cq-btn" data-reply-decision="${escape(question.id)}" data-reply-value="${escape(option)}" data-tone="${STOP_DECISIONS.has(option) ? "stop" : DENY_DECISIONS.has(option) ? "deny" : index === 0 ? "primary" : "neutral"}" data-key="reply-decision:${escape(question.id)}:${index}">${escape(decision.labels?.[option] ?? option)}</button>`).join("")}</div>` : "";
-    if (question.kind === "plan") return `<div class="cq" data-kind="plan">${header}<div class="ops-reply-plan ops-md">${renderMarkdown(question.detail)}</div>${extras}${buttons}${error}<small class="cq-note">Duyệt kế hoạch thực hiện trong ứng dụng Claude; Claude không cho hook tự duyệt kế hoạch.</small></div>`;
-    return `<div class="cq" data-kind="approval">${header}${question.detail ? `<pre class="ops-reply-detail" tabindex="0">${escape(question.detail)}</pre>` : ""}${extras}${buttons}${error}<small class="cq-note">Ai trả lời trước (web hoặc app) sẽ được áp dụng.</small></div>`;
+    const buttons = decision && pendingStop && decision.options.includes(pendingStop) ? L("<div class=\"ops-control-confirm\" role=\"group\" aria-label=\"Xác nhận {0}\"><p>{1}</p><div class=\"cq-actions\"><button type=\"button\" class=\"cq-btn\" data-tone=\"stop\" data-reply-confirm=\"{2}\" data-reply-value=\"{3}\" data-key=\"reply-confirm:{4}\">Xác nhận</button><button type=\"button\" class=\"cq-btn\" data-tone=\"neutral\" data-reply-cancel=\"{5}\" data-key=\"reply-cancel:{6}\">Huỷ</button></div></div>", escape(decision.labels?.[pendingStop] ?? pendingStop), escape(STOP_WARNINGS[pendingStop] ?? L("Từ chối và dừng lượt đang chạy.")), escape(question.id), escape(pendingStop), escape(question.id), escape(question.id), escape(question.id)) : decision ? `<div class="cq-actions" role="group" aria-label="${question.kind === "plan" ? L("Phản hồi kế hoạch") : L("Quyết định cấp quyền")}">${decision.options.map((option, index) => `<button type="button" class="cq-btn" data-reply-decision="${escape(question.id)}" data-reply-value="${escape(option)}" data-tone="${STOP_DECISIONS.has(option) ? "stop" : DENY_DECISIONS.has(option) ? "deny" : index === 0 ? "primary" : "neutral"}" data-key="reply-decision:${escape(question.id)}:${index}">${escape(decision.labels?.[option] ?? option)}</button>`).join("")}</div>` : "";
+    if (question.kind === "plan") return L("<div class=\"cq\" data-kind=\"plan\">{0}<div class=\"ops-reply-plan ops-md\">{1}</div>{2}{3}{4}<small class=\"cq-note\">Duyệt kế hoạch thực hiện trong ứng dụng Claude; Claude không cho hook tự duyệt kế hoạch.</small></div>", header, renderMarkdown(question.detail), extras, buttons, error);
+    return L("<div class=\"cq\" data-kind=\"approval\">{0}{1}{2}{3}{4}<small class=\"cq-note\">Ai trả lời trước (web hoặc app) sẽ được áp dụng.</small></div>", header, question.detail ? `<pre class="ops-reply-detail" tabindex="0">${escape(question.detail)}</pre>` : "", extras, buttons, error);
   }
 
   private decisionField(question: ReplyQuestion): ReplyField | undefined {
@@ -154,14 +155,14 @@ export class ReplyControls {
       const description = field.descriptions?.[option];
       return `<label class="cq-option"><input type="${field.multiSelect ? "checkbox" : "radio"}" name="reply-${escape(key)}" value="${escape(option)}" data-reply-field="${escape(key)}" data-key="reply:${escape(key)}:${index}" ${selected.includes(option) ? "checked" : ""}><span class="cq-index" aria-hidden="true">${index + 1}</span><span class="cq-text"><span class="cq-label">${escape(field.labels?.[option] ?? option)}</span>${description ? `<span class="cq-desc">${escape(description)}</span>` : ""}</span><span class="cq-mark" data-multi="${field.multiSelect}" aria-hidden="true"></span></label>`;
     }).join("");
-    const other = field.allowFreeText ? `<label class="cq-other"><span class="cq-label">${field.options.length ? "Khác" : "Câu trả lời"}</span><textarea rows="1" maxlength="4000" placeholder="Nhập câu trả lời của sếp…" data-reply-text="${escape(key)}" data-key="reply:${escape(key)}:text">${escape(selected.find((value) => !field.options.includes(value)) ?? "")}</textarea></label>` : "";
+    const other = field.allowFreeText ? L("<label class=\"cq-other\"><span class=\"cq-label\">{0}</span><textarea rows=\"1\" maxlength=\"4000\" placeholder=\"Nhập câu trả lời của sếp…\" data-reply-text=\"{1}\" data-key=\"reply:{2}:text\">{3}</textarea></label>", field.options.length ? L("Khác") : L("Câu trả lời"), escape(key), escape(key), escape(selected.find((value) => !field.options.includes(value)) ?? "")) : "";
     return `<fieldset class="cq-field"><legend class="cq-question">${field.header ? `<span class="cq-chip">${escape(field.header)}</span>` : ""}<span>${escape(field.text)}</span></legend><div class="cq-options">${rows}${other}</div></fieldset>`;
   }
 
   private textMarkup(question: ReplyQuestion, field: ReplyField): string {
     if (field.options.length) return this.fieldMarkup(question, field);
     const key = `${question.id}:${field.id}`;
-    const label = field.id === "feedback" ? "Lý do / góp ý cho agent (không bắt buộc)" : `${field.text}${field.optional ? " (không bắt buộc)" : ""}`;
+    const label = field.id === "feedback" ? L("Lý do / góp ý cho agent (không bắt buộc)") : `${field.text}${field.optional ? L(" (không bắt buộc)") : ""}`;
     return `<label class="ops-reply-feedback">${escape(label)}<textarea rows="2" maxlength="4000" data-reply-text="${escape(key)}" data-key="reply:${escape(key)}:text">${escape(this.values.get(key)?.[0] ?? "")}</textarea></label>`;
   }
 
@@ -225,7 +226,7 @@ export class ReplyControls {
     const answers: Record<string, string[]> = Object.fromEntries(question.fields.map((field) => [field.id, (this.values.get(`${id}:${field.id}`) ?? []).map((value) => value.trim()).filter(Boolean)]));
     for (const field of question.fields) if (field.optional && !answers[field.id].length) delete answers[field.id];
     if (question.fields.some((field) => !answers[field.id] && !field.optional) || question.fields.some((field) => answers[field.id] && ((!field.multiSelect && answers[field.id].length !== 1) || (!field.allowFreeText && answers[field.id].some((value) => !field.options.includes(value)))))) {
-      this.errors.set(id, question.kind === "question" ? "Chọn hoặc nhập câu trả lời cho tất cả câu hỏi trước khi gửi." : "Chọn một quyết định trước khi gửi.");
+      this.errors.set(id, question.kind === "question" ? L("Chọn hoặc nhập câu trả lời cho tất cả câu hỏi trước khi gửi.") : L("Chọn một quyết định trước khi gửi."));
       this.changed();
       return;
     }
@@ -236,29 +237,29 @@ export class ReplyControls {
     const requestId = `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
     const body = JSON.stringify({ requestId, questionId: id, agentId: question.agentId, machine: question.machine, answers });
     if (new TextEncoder().encode(body).byteLength > 32 * 1024) {
-      this.errors.set(id, "Tổng nội dung quá dài. Rút ngắn câu trả lời rồi gửi lại; chưa gửi dữ liệu.");
+      this.errors.set(id, L("Tổng nội dung quá dài. Rút ngắn câu trả lời rồi gửi lại; chưa gửi dữ liệu."));
       this.changed();
       return;
     }
-    const receipt: LocalReply = { requestId, questionId: id, agentId: question.agentId, machine: question.machine, status: "pending", kind: question.kind, sentAt: Date.now(), detail: question.kind === "question" ? "Đang gửi câu trả lời. Không gửi lại trong khi kiểm tra." : "Đang gửi quyết định. Không gửi lại trong khi kiểm tra." };
+    const receipt: LocalReply = { requestId, questionId: id, agentId: question.agentId, machine: question.machine, status: "pending", kind: question.kind, sentAt: Date.now(), detail: question.kind === "question" ? L("Đang gửi câu trả lời. Không gửi lại trong khi kiểm tra.") : L("Đang gửi quyết định. Không gửi lại trong khi kiểm tra.") };
     this.receipts.set(id, receipt);
     if (!this.save()) {
       this.receipts.delete(id);
-      this.errors.set(id, "Không lưu được biên nhận trong trình duyệt. Bật lưu trữ trang rồi thử lại; chưa gửi câu trả lời.");
+      this.errors.set(id, L("Không lưu được biên nhận trong trình duyệt. Bật lưu trữ trang rồi thử lại; chưa gửi câu trả lời."));
       this.changed();
       return;
     }
     this.changed();
     try {
       const response = await fetch("/api/replies", { method: "POST", headers: { "content-type": "application/json", "x-msc-reply": "human-web" }, body, signal: AbortSignal.timeout(40_000) });
-      if (!response.ok) throw new Error("Chưa xác nhận được kết quả gửi. Kiểm tra biên nhận hoặc chat gốc trước khi thao tác tiếp.");
+      if (!response.ok) throw new Error(L("Chưa xác nhận được kết quả gửi. Kiểm tra biên nhận hoặc chat gốc trước khi thao tác tiếp."));
       const result = await response.json() as ReplyReceipt;
-      if (result.requestId !== requestId || result.questionId !== id) throw new Error("Biên nhận không khớp.");
+      if (result.requestId !== requestId || result.questionId !== id) throw new Error(L("Biên nhận không khớp."));
       if (this.data) this.data.questions = this.data.questions.filter((entry) => entry.id !== id);
       Object.assign(receipt, result);
     } catch {
       receipt.status = "unknown";
-      receipt.detail = "Chưa xác nhận được kết quả; không gửi lại. Kiểm tra biên nhận hoặc chat gốc.";
+      receipt.detail = L("Chưa xác nhận được kết quả; không gửi lại. Kiểm tra biên nhận hoặc chat gốc.");
     }
     this.save();
     this.changed();
@@ -270,12 +271,12 @@ export class ReplyControls {
     if (!receipt) return;
     try {
       const response = await fetch(`/api/replies/${encodeURIComponent(receipt.requestId)}?machine=${encodeURIComponent(receipt.machine)}`, { cache: "no-store", signal: AbortSignal.timeout(15_000) });
-      if (!response.ok) throw new Error("Chưa kết nối được nơi lưu biên nhận; kiểm tra chat gốc. Không gửi lại.");
+      if (!response.ok) throw new Error(L("Chưa kết nối được nơi lưu biên nhận; kiểm tra chat gốc. Không gửi lại."));
       const result = await response.json() as ReplyReceipt | null;
       if (result?.requestId === receipt.requestId && result.questionId === id) Object.assign(receipt, result);
-      else receipt.detail = "Chưa tìm thấy biên nhận trên máy đích. Kiểm tra chat gốc; không gửi lại khi chưa xác minh.";
+      else receipt.detail = L("Chưa tìm thấy biên nhận trên máy đích. Kiểm tra chat gốc; không gửi lại khi chưa xác minh.");
     } catch {
-      receipt.detail = "Chưa kết nối được nơi lưu biên nhận; kiểm tra chat gốc. Không gửi lại.";
+      receipt.detail = L("Chưa kết nối được nơi lưu biên nhận; kiểm tra chat gốc. Không gửi lại.");
     }
     this.save();
     this.changed();

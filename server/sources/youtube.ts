@@ -1,3 +1,4 @@
+import { L } from "../../shared/i18n.ts";
 import type { YouTubeFeed, YouTubeVideo } from "../../shared/youtube.ts";
 
 const CHANNEL_ID = (process.env.MSC_YOUTUBE_CHANNEL_ID ?? "").trim();
@@ -33,7 +34,7 @@ export function parseYouTubeFeed(xml: string): { channelTitle: string; videos: Y
   return { channelTitle: tag(head, "title") ?? "YouTube", videos };
 }
 
-let cached: YouTubeFeed = { connected: false, note: "Đang đọc kênh YouTube", channelId: CHANNEL_ID, channelTitle: "YouTube", videos: [], fetchedAt: null };
+let cached: YouTubeFeed = { connected: false, note: L("Đang đọc kênh YouTube"), channelId: CHANNEL_ID, channelTitle: "YouTube", videos: [], fetchedAt: null };
 let nextFetchAt = 0;
 let pending: Promise<YouTubeFeed> | null = null;
 
@@ -45,17 +46,17 @@ export async function fetchChannelRss(channelId: string, fetchImpl: typeof fetch
 
 async function fetchFeed(): Promise<YouTubeFeed> {
   if (!CHANNEL_ID) {
-    cached = { ...cached, connected: false, note: "Chưa đặt MSC_YOUTUBE_CHANNEL_ID" };
+    cached = { ...cached, connected: false, note: L("Chưa đặt MSC_YOUTUBE_CHANNEL_ID") };
     nextFetchAt = Date.now() + CACHE_MS;
     return cached;
   }
   try {
     const { channelTitle, videos } = await fetchChannelRss(CHANNEL_ID);
-    cached = { connected: true, note: `${videos.length} video công khai`, channelId: CHANNEL_ID, channelTitle, videos, fetchedAt: new Date().toISOString() };
+    cached = { connected: true, note: L("{0} video công khai", videos.length), channelId: CHANNEL_ID, channelTitle, videos, fetchedAt: new Date().toISOString() };
     nextFetchAt = Date.now() + CACHE_MS;
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);
-    cached = { ...cached, connected: cached.videos.length > 0, note: cached.videos.length ? `Đang dùng danh sách cũ, lỗi đọc lại: ${reason}` : `Không đọc được kênh YouTube: ${reason}` };
+    cached = { ...cached, connected: cached.videos.length > 0, note: cached.videos.length ? L("Đang dùng danh sách cũ, lỗi đọc lại: {0}", reason) : L("Không đọc được kênh YouTube: {0}", reason) };
     nextFetchAt = Date.now() + RETRY_MS;
   }
   return cached;

@@ -1,3 +1,4 @@
+import { L } from "../../shared/i18n.ts";
 import * as THREE from "three";
 import { mascotArmReach, mascotHandPosition, reachMascotHand, type Mascot } from "./mascots.ts";
 import type { LoungeActivity } from "./layout.ts";
@@ -871,11 +872,11 @@ export function tickBilliards(t: number, dt: number): void {
     const potted = table.physics.balls.filter(ball => ball.number > 0 && ball.pocketed).length;
     const rules = table.physics.rules;
     const group = rules.groups[rules.currentPlayer];
-    const label = group === "solid" ? "TRƠN" : group === "stripe" ? "SỌC" : "BÀN MỞ";
-    const call = table.plan?.pocket == null ? "AN TOÀN" : `BI ${table.plan.ball} → LỖ ${table.plan.pocket + 1}`;
-    const foulNames = { scratch: "BI TRẮNG VÀO LỖ", "no-contact": "KHÔNG CHẠM BI", "wrong-first-ball": "CHẠM SAI BI", "no-rail": "KHÔNG CHẠM BĂNG", "illegal-break": "PHÁ BI LỖI", "early-eight": "BI 8 QUÁ SỚM", "wrong-eight-pocket": "BI 8 SAI LỖ" };
-    const headline = rules.winner !== null ? `NGƯỜI ${rules.winner + 1} THẮNG` : `LƯỢT ${rules.currentPlayer + 1} · ${label}`;
-    const detail = rules.lastFoul ? `LỖI: ${foulNames[rules.lastFoul]}` : table.physics.shots === 0 ? "PHÁ BI" : call;
+    const label = group === "solid" ? L("TRƠN") : group === "stripe" ? L("SỌC") : L("BÀN MỞ");
+    const call = table.plan?.pocket == null ? L("AN TOÀN") : L("BI {0} → LỖ {1}", table.plan.ball, table.plan.pocket + 1);
+    const foulNames = { scratch: L("BI TRẮNG VÀO LỖ"), "no-contact": L("KHÔNG CHẠM BI"), "wrong-first-ball": L("CHẠM SAI BI"), "no-rail": L("KHÔNG CHẠM BĂNG"), "illegal-break": L("PHÁ BI LỖI"), "early-eight": L("BI 8 QUÁ SỚM"), "wrong-eight-pocket": L("BI 8 SAI LỖ") };
+    const headline = rules.winner !== null ? L("NGƯỜI {0} THẮNG", rules.winner + 1) : L("LƯỢT {0} · {1}", rules.currentPlayer + 1, label);
+    const detail = rules.lastFoul ? L("LỖI: {0}", foulNames[rules.lastFoul]) : table.physics.shots === 0 ? L("PHÁ BI") : call;
     const status = `${headline}|${detail}`;
     if (status !== table.lastScore) {
       const context = table.scoreCanvas.getContext("2d")!;

@@ -1,3 +1,4 @@
+import { L } from "../../shared/i18n.ts";
 import { open, readdir } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -25,7 +26,7 @@ function requestText(text: string): string {
   const request = text.includes("## My request:") ? text.split("## My request:").slice(1).join("## My request:") : text;
   const cleaned = request.replace(/<image\b[^>]*>[\s\S]*?<\/image>/gi, "").trim();
   if (!cleaned || cleaned.startsWith("<") || /^# AGENTS\.md instructions\b/.test(cleaned)) return "";
-  return clip(cleaned.replace(/\b(?:sk-[\w-]{16,}|gh[pousr]_[\w]{16,}|Bearer\s+[\w.\/-]+)/gi, "[đã ẩn]"), 2000);
+  return clip(cleaned.replace(/\b(?:sk-[\w-]{16,}|gh[pousr]_[\w]{16,}|Bearer\s+[\w.\/-]+)/gi, L("[đã ẩn]")), 2000);
 }
 
 function dayDir(d: Date): string {
@@ -127,7 +128,7 @@ function callSummary(p: any): string {
 function tailState(records: any[], fresh: boolean): { state: AgentState; detail: string; files: string[]; pending: PendingQuestion | null } {
   const files: string[] = [];
   let state: AgentState = fresh ? "thinking" : "idle";
-  let detail = fresh ? "Đang suy nghĩ" : "";
+  let detail = fresh ? L("Đang suy nghĩ") : "";
   let pending: PendingQuestion | null = null;
   let pendingCall: string | null = null;
   let asyncQuestion = false;
@@ -136,25 +137,25 @@ function tailState(records: any[], fresh: boolean): { state: AgentState; detail:
     const p = rec.payload ?? {};
     if (rec.type === "event_msg" && ["task_complete", "task_aborted", "turn_aborted"].includes(p.type)) {
       state = "idle";
-      detail = clip(String(p.last_agent_message ?? (p.type === "task_complete" ? "Đã xong lượt" : "Đã dừng lượt")), 90);
+      detail = clip(String(p.last_agent_message ?? (p.type === "task_complete" ? L("Đã xong lượt") : L("Đã dừng lượt"))), 90);
       pending = null;
       pendingCall = null;
       terminal = true;
     } else if (rec.type === "event_msg" && (p.type === "task_started" || p.type === "user_message")) {
       state = "thinking";
-      detail = "Đang suy nghĩ";
+      detail = L("Đang suy nghĩ");
       pending = null;
       pendingCall = null;
       terminal = false;
     } else if (rec.type === "response_item" && p.type === "message" && p.role === "user" && userText(p)) {
       state = "thinking";
-      detail = "Đang suy nghĩ";
+      detail = L("Đang suy nghĩ");
       pending = null;
       pendingCall = null;
       terminal = false;
     } else if (rec.type === "response_item" && p.type === "message" && p.role === "assistant" && ["final", "final_answer"].includes(p.channel ?? p.phase)) {
       state = "idle";
-      detail = clip(progressText(rec) || "Đã xong lượt", 90);
+      detail = clip(progressText(rec) || L("Đã xong lượt"), 90);
       pending = null;
       pendingCall = null;
       terminal = true;
@@ -162,7 +163,7 @@ function tailState(records: any[], fresh: boolean): { state: AgentState; detail:
       continue;
     } else if (rec.type === "response_item" && p.type === "reasoning") {
       state = "thinking";
-      detail = "Đang suy nghĩ";
+      detail = L("Đang suy nghĩ");
     } else if (rec.type === "response_item" && (p.type === "custom_tool_call" || p.type === "function_call")) {
       const name = String(p.name ?? "").split(/[.:]/).pop();
       const asks = name === "request_user_input" || name === "request_user_input_async";
@@ -172,7 +173,7 @@ function tailState(records: any[], fresh: boolean): { state: AgentState; detail:
         const input = callInput(p);
         const questions = Array.isArray(input.questions) ? input.questions : [];
         pending = {
-          question: questions.map((q) => clip(String(q.question ?? q.title ?? "Cần sếp trả lời"), 1000)).join("\n") || "Cần sếp trả lời",
+          question: questions.map((q) => clip(String(q.question ?? q.title ?? L("Cần sếp trả lời")), 1000)).join("\n") || L("Cần sếp trả lời"),
           options: questions.flatMap((q) => (Array.isArray(q.options) ? q.options : []).map((o: any) => clip(String(typeof o === "string" ? o : o.label ?? ""), 160))).filter(Boolean),
           askedAt: Number.isFinite(Date.parse(rec.timestamp)) ? rec.timestamp : new Date(0).toISOString(),
         };
@@ -190,7 +191,7 @@ function tailState(records: any[], fresh: boolean): { state: AgentState; detail:
         pending = null;
         pendingCall = null;
         state = "thinking";
-        detail = "Đang suy nghĩ";
+        detail = L("Đang suy nghĩ");
       }
     }
   }
@@ -223,7 +224,7 @@ export async function readCodex(machine: MachineId): Promise<AgentInfo[]> {
       aliases: head.agentPath ? [head.agentPath] : [],
       nativeUrl: ["Codex Desktop", "codex_work_desktop"].includes(head.originator) && /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(head.id) ? `codex://threads/${head.id}` : undefined,
       ...collectActivity(records, head.cwd, "codex", now),
-      title: clip(head.prompt || "Luồng Codex", 80),
+      title: clip(head.prompt || L("Luồng Codex"), 80),
       model: head.model || undefined,
       branch: head.branch || undefined,
       task: head.prompt || undefined,

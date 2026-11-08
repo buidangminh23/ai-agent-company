@@ -1,3 +1,4 @@
+import { L } from "../shared/i18n.ts";
 import "./env.ts";
 import { httpsRedirect, isHttps, isLoopback, tokenCookie } from "./access.ts";
 import { timingSafeEqual } from "node:crypto";
@@ -15,6 +16,7 @@ import { readYouTube } from "./sources/youtube.ts";
 import { YouTubeAccount, YouTubeError } from "./sources/youtube-account.ts";
 import { YT_FEEDS, type YtFeedKind } from "../shared/youtube.ts";
 import { readAutomation } from "./sources/automation.ts";
+import { demoAgents, demoHealth, demoProjects, demoQuota, demoSites, demoSkills } from "./demo.ts";
 import type { AutomationJob, AutomationReport } from "../shared/automation.ts";
 import { readSystemInventory } from "./sources/system.ts";
 import type { SystemInventory, SystemReport } from "../shared/system.ts";
@@ -59,6 +61,7 @@ const GITHUB_PINNED = parsePinned(process.env.MSC_GITHUB_PINNED ?? "");
 const GITHUB_ACTIONS: GitAction[] = ["rerun", "merge", "close", "read"];
 const COLLECTOR_TIMEOUT_MS = 2500;
 const IS_COLLECTOR = process.env.MSC_ROLE === "collector";
+const DEMO = /^(1|true|yes|on)$/i.test((process.env.MSC_DEMO ?? "").trim());
 const PUBLIC_URL = (process.env.MSC_PUBLIC_URL ?? "").trim();
 const TOKEN = (process.env.MSC_TOKEN ?? "").trim();
 const REMOTE_TOKEN = (process.env.MSC_COLLECTOR_TOKEN ?? TOKEN).trim();
@@ -97,7 +100,7 @@ function viewerOk(req: http.IncomingMessage): boolean {
 
 function sendLogin(res: http.ServerResponse, wrong: boolean): void {
   res.writeHead(401, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" });
-  res.end(`<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>AI Agent Company</title><style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:#0f1115;color:#e8eaf0;font:16px system-ui,sans-serif}form{display:grid;gap:12px;width:min(340px,calc(100vw - 32px))}input,button{font:inherit;padding:12px;border-radius:8px;border:1px solid #333a46;background:#171a21;color:inherit}button{background:#2d6cdf;border-color:#2d6cdf;cursor:pointer}p{margin:0;color:#ff7b7b}</style></head><body><form method="post" action="${LOGIN_PATH}"><label for="k">Mã truy cập</label><input id="k" name="${TOKEN_FIELD}" type="password" autocomplete="current-password" autofocus required>${wrong ? "<p>Mã không đúng</p>" : ""}<button type="submit">Vào</button></form></body></html>`);
+  res.end(L("<!doctype html><html lang=\"vi\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>AI Agent Company</title><style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:#0f1115;color:#e8eaf0;font:16px system-ui,sans-serif}form{display:grid;gap:12px;width:min(340px,calc(100vw - 32px))}input,button{font:inherit;padding:12px;border-radius:8px;border:1px solid #333a46;background:#171a21;color:inherit}button{background:#2d6cdf;border-color:#2d6cdf;cursor:pointer}p{margin:0;color:#ff7b7b}</style></head><body><form method=\"post\" action=\"{0}\"><label for=\"k\">Mã truy cập</label><input id=\"k\" name=\"{1}\" type=\"password\" autocomplete=\"current-password\" autofocus required>{2}<button type=\"submit\">Vào</button></form></body></html>", LOGIN_PATH, TOKEN_FIELD, wrong ? L("<p>Mã không đúng</p>") : ""));
 }
 
 function setTokenCookie(req: http.IncomingMessage, res: http.ServerResponse): void {
@@ -203,8 +206,8 @@ const handleControls = createControlHandler({
 let quota: QuotaSnapshot = { connected: false, rows: [], fetchedAt: null };
 let sites: SiteStatus[] = [];
 let tasksToday = 0;
-let skills: SkillsSnapshot = { connected: false, note: "Đang đọc thư viện skill", total: 0, groups: [] };
-let projects: ProjectsSnapshot = { connected: false, note: "Đang đọc GitHub", repos: [], fetchedAt: null };
+let skills: SkillsSnapshot = { connected: false, note: L("Đang đọc thư viện skill"), total: 0, groups: [] };
+let projects: ProjectsSnapshot = { connected: false, note: L("Đang đọc GitHub"), repos: [], fetchedAt: null };
 let inbox: InboxSnapshot = EMPTY_INBOX;
 let inboxPromise: Promise<void> | null = null;
 const MAX_EVENT_BODY = 16 * 1024;
@@ -219,7 +222,7 @@ function sameOrigin(req: IncomingMessage): boolean {
   }
 }
 
-function readJson(req: IncomingMessage, limit: number, invalid = "Dữ liệu sự kiện không hợp lệ"): Promise<unknown> {
+function readJson(req: IncomingMessage, limit: number, invalid = L("Dữ liệu sự kiện không hợp lệ")): Promise<unknown> {
   return new Promise((resolve, reject) => {
     let body = "";
     let size = 0;
@@ -228,7 +231,7 @@ function readJson(req: IncomingMessage, limit: number, invalid = "Dữ liệu s�
       body += chunk;
       size += Buffer.byteLength(chunk);
       if (size > limit) {
-        reject(new LocalEventError("Nội dung quá dài"));
+        reject(new LocalEventError(L("Nội dung quá dài")));
         req.destroy();
       }
     });
@@ -255,19 +258,19 @@ async function handleLocalEvent(req: IncomingMessage, res: ServerResponse, rawId
     res.writeHead(405, { Allow: allowed.join(", ") }).end();
     return;
   }
-  if (!sameOrigin(req)) return reply(403, { error: "Chỉ nhận thao tác từ chính trang này" });
-  if (id && !/^[0-9a-f-]{36}$/.test(id)) return reply(404, { error: "Không tìm thấy sự kiện" });
+  if (!sameOrigin(req)) return reply(403, { error: L("Chỉ nhận thao tác từ chính trang này") });
+  if (id && !/^[0-9a-f-]{36}$/.test(id)) return reply(404, { error: L("Không tìm thấy sự kiện") });
   try {
-    if (req.method === "DELETE") return localEvents.remove(id) ? reply(200, { ok: true }) : reply(404, { error: "Không tìm thấy sự kiện" });
-    if (!String(req.headers["content-type"] ?? "").startsWith("application/json")) return reply(415, { error: "Yêu cầu JSON" });
+    if (req.method === "DELETE") return localEvents.remove(id) ? reply(200, { ok: true }) : reply(404, { error: L("Không tìm thấy sự kiện") });
+    if (!String(req.headers["content-type"] ?? "").startsWith("application/json")) return reply(415, { error: L("Yêu cầu JSON") });
     const input = validateInput(await readJson(req, MAX_EVENT_BODY));
     if (req.method === "POST") return reply(201, localEvents.create(input));
     const updated = localEvents.update(id, input);
-    return updated ? reply(200, updated) : reply(404, { error: "Không tìm thấy sự kiện" });
+    return updated ? reply(200, updated) : reply(404, { error: L("Không tìm thấy sự kiện") });
   } catch (error) {
     if (error instanceof LocalEventError) return reply(400, { error: error.message });
     console.error("[calendar] local event write failed:", error instanceof Error ? error.message : error);
-    return reply(500, { error: "Không lưu được sự kiện trên hub" });
+    return reply(500, { error: L("Không lưu được sự kiện trên hub") });
   }
 }
 
@@ -287,21 +290,21 @@ async function handleTodos(req: IncomingMessage, res: ServerResponse, id: string
   }
   try {
     if (req.method === "GET") return reply(200, { todos: todos.list() });
-    if (!sameOrigin(req)) return reply(403, { error: "Chỉ nhận thao tác từ chính trang này" });
-    if (id && !/^[0-9a-f-]{36}$/.test(id)) return reply(404, { error: "Không tìm thấy việc" });
+    if (!sameOrigin(req)) return reply(403, { error: L("Chỉ nhận thao tác từ chính trang này") });
+    if (id && !/^[0-9a-f-]{36}$/.test(id)) return reply(404, { error: L("Không tìm thấy việc") });
     let status = 200;
     let body: unknown = { ok: true };
     if (req.method === "DELETE") {
-      if (!todos.remove(id)) return reply(404, { error: "Không tìm thấy việc" });
+      if (!todos.remove(id)) return reply(404, { error: L("Không tìm thấy việc") });
     } else {
-      if (!String(req.headers["content-type"] ?? "").startsWith("application/json")) return reply(415, { error: "Yêu cầu JSON" });
-      const raw = await readJson(req, MAX_TODO_BODY, "Dữ liệu công việc không hợp lệ");
+      if (!String(req.headers["content-type"] ?? "").startsWith("application/json")) return reply(415, { error: L("Yêu cầu JSON") });
+      const raw = await readJson(req, MAX_TODO_BODY, L("Dữ liệu công việc không hợp lệ"));
       if (req.method === "POST") {
         status = 201;
         body = todos.create(validateCreate(raw));
       } else {
         body = todos.update(id, validatePatch(raw));
-        if (!body) return reply(404, { error: "Không tìm thấy việc" });
+        if (!body) return reply(404, { error: L("Không tìm thấy việc") });
       }
     }
     for (const client of clients) client.write("event: todos\ndata: {}\n\n");
@@ -309,7 +312,7 @@ async function handleTodos(req: IncomingMessage, res: ServerResponse, id: string
   } catch (error) {
     if (error instanceof TodoError || error instanceof LocalEventError) return reply(400, { error: error.message });
     console.error("[todos] write failed:", error instanceof Error ? error.message : error);
-    return reply(500, { error: "Không lưu được việc trên hub" });
+    return reply(500, { error: L("Không lưu được việc trên hub") });
   }
 }
 
@@ -322,7 +325,7 @@ async function handleYouTube(req: IncomingMessage, res: ServerResponse, route: s
     res.end(JSON.stringify(body));
   };
   const method = req.method ?? "GET";
-  if (method !== "GET" && !sameOrigin(req)) return reply(403, { error: "Chỉ nhận thao tác từ chính trang này" });
+  if (method !== "GET" && !sameOrigin(req)) return reply(403, { error: L("Chỉ nhận thao tác từ chính trang này") });
   try {
     if (route === "status" && method === "GET") return reply(200, youtubeAccount.status());
     if (route === "connect" && method === "POST") return reply(200, await youtubeAccount.startDeviceFlow());
@@ -335,11 +338,11 @@ async function handleYouTube(req: IncomingMessage, res: ServerResponse, route: s
     if (method === "GET" && (YT_FEEDS as readonly string[]).includes(kind)) {
       return reply(200, await youtubeAccount.feed(kind as YtFeedKind, query.get("q") ?? query.get("id") ?? ""));
     }
-    return reply(404, { error: "Không có thao tác này" });
+    return reply(404, { error: L("Không có thao tác này") });
   } catch (error) {
     if (error instanceof YouTubeError) return reply(error.status, { error: error.message });
     console.error("[youtube] request failed:", error instanceof Error ? error.message : error);
-    return reply(502, { error: "Không kết nối được YouTube. Thử lại sau." });
+    return reply(502, { error: L("Không kết nối được YouTube. Thử lại sau.") });
   }
 }
 const mailCache = new Map<string, MailContent>();
@@ -376,7 +379,7 @@ function withHookWait(agent: AgentInfo): AgentInfo {
   if (agent.app !== "claude" || agent.parentId || !agent.sessionId) return agent;
   const first = claudeHooks.pending(agent.sessionId)[0];
   if (!first) return agent;
-  const question = first.toolName === "AskUserQuestion" ? "Claude đang hỏi sếp" : first.toolName === "ExitPlanMode" ? "Claude chờ duyệt kế hoạch" : `Claude xin quyền dùng ${first.toolName}`;
+  const question = first.toolName === "AskUserQuestion" ? L("Claude đang hỏi sếp") : first.toolName === "ExitPlanMode" ? L("Claude chờ duyệt kế hoạch") : L("Claude xin quyền dùng {0}", first.toolName);
   return { ...agent, state: "waiting", pending: agent.pending ?? { question, options: [], askedAt: first.receivedAt, kind: "question" } };
 }
 
@@ -420,8 +423,8 @@ const firmRoles = new Map<string, RoleId>();
 
 function buildSnapshot(): Snapshot {
   const feeds = new Map<MachineId, MachineFeed>([[SELF, localFeed], ...remoteFeeds]);
-  const agents = resolveAgentRoles([...feeds.values()].flatMap((f) => f.agents), firmRoles);
-  const machines = MACHINES.map((id) => feeds.get(id)?.health ?? offlineHealth(id));
+  const agents = resolveAgentRoles(DEMO ? demoAgents() : [...feeds.values()].flatMap((f) => f.agents), firmRoles);
+  const machines = DEMO ? demoHealth() : MACHINES.map((id) => feeds.get(id)?.health ?? offlineHealth(id));
   const recent = agents.filter((a) => a.state !== "idle" || Date.now() - Date.parse(a.updatedAt) < 30 * 60_000);
   return {
     generatedAt: new Date().toISOString(),
@@ -435,7 +438,7 @@ function buildSnapshot(): Snapshot {
     sites,
     quota,
     activity: {
-      tasksToday: [...feeds.values()].reduce((n, f) => n + f.tasksToday, 0),
+      tasksToday: DEMO ? 37 : [...feeds.values()].reduce((n, f) => n + f.tasksToday, 0),
       activeProjects: new Set(recent.map((a) => `${a.machine}:${a.project}`)).size,
       agentsWorking: agents.filter((a) => a.state === "working" || a.state === "thinking").length,
       machinesOnline: machines.filter((m) => m.online).length,
@@ -471,18 +474,18 @@ async function agentTick(): Promise<void> {
 
 async function slowTick(): Promise<void> {
   const [q, s] = await Promise.all([readQuota(), Promise.all(SITES.map((x) => checkSite(x.url, x.label)))]);
-  quota = q;
-  sites = s;
+  quota = DEMO ? demoQuota() : q;
+  sites = DEMO ? demoSites() : s;
   broadcast();
 }
 
 async function skillsTick(): Promise<void> {
-  skills = await readSkills();
+  skills = DEMO ? demoSkills() : await readSkills();
   broadcast();
 }
 
 async function projectsTick(): Promise<void> {
-  projects = await readProjects();
+  projects = DEMO ? demoProjects() : await readProjects();
   broadcast();
 }
 
@@ -490,6 +493,10 @@ let github: GitHubSnapshot = EMPTY_GITHUB;
 let githubRun: Promise<void> | null = null;
 
 function githubTick(): Promise<void> {
+  if (DEMO) {
+    github = { ...EMPTY_GITHUB, connected: true, note: "", login: "demo", fetchedAt: new Date().toISOString(), repos: 4, items: [] };
+    return Promise.resolve();
+  }
   githubRun ??= readGitHub()
     .then((next) => {
       const changed = JSON.stringify(next.items) !== JSON.stringify(github.items) || next.connected !== github.connected || next.note !== github.note;
@@ -513,8 +520,8 @@ async function handleGitHubAction(req: IncomingMessage, res: ServerResponse): Pr
     res.writeHead(405, { Allow: "POST" }).end();
     return;
   }
-  if (!sameOrigin(req)) return reply(403, { error: "Chỉ nhận thao tác từ chính trang này" });
-  if (!String(req.headers["content-type"] ?? "").startsWith("application/json")) return reply(415, { error: "Yêu cầu JSON" });
+  if (!sameOrigin(req)) return reply(403, { error: L("Chỉ nhận thao tác từ chính trang này") });
+  if (!String(req.headers["content-type"] ?? "").startsWith("application/json")) return reply(415, { error: L("Yêu cầu JSON") });
   try {
     const body = (await readJson(req, 4096)) as { id?: unknown; action?: unknown };
     if (body.action === "read-all") {
@@ -522,8 +529,8 @@ async function handleGitHubAction(req: IncomingMessage, res: ServerResponse): Pr
     } else {
       const action = GITHUB_ACTIONS.find((entry) => entry === body.action);
       const item = github.items.find((entry) => entry.id === body.id);
-      if (!action || !item) return reply(404, { error: "Mục này đã thay đổi trên GitHub. Làm mới rồi thử lại." });
-      if (!item.actions.includes(action)) return reply(409, { error: "Thao tác này không áp dụng cho mục đã chọn." });
+      if (!action || !item) return reply(404, { error: L("Mục này đã thay đổi trên GitHub. Làm mới rồi thử lại.") });
+      if (!item.actions.includes(action)) return reply(409, { error: L("Thao tác này không áp dụng cho mục đã chọn.") });
       await runGitAction(item, action);
     }
     if (githubRun) await githubRun.catch(() => undefined);
@@ -531,7 +538,7 @@ async function handleGitHubAction(req: IncomingMessage, res: ServerResponse): Pr
     return reply(200, { ok: true });
   } catch (error) {
     if (error instanceof LocalEventError) return reply(400, { error: error.message });
-    return reply(502, { error: `GitHub từ chối: ${error instanceof Error ? error.message : "lỗi không rõ"}` });
+    return reply(502, { error: L("GitHub từ chối: {0}", error instanceof Error ? error.message : L("lỗi không rõ")) });
   }
 }
 
@@ -726,8 +733,8 @@ function handleRequest(req: http.IncomingMessage, res: http.ServerResponse): voi
       res.end(JSON.stringify(body));
     };
     readCalendarRange(Number(url.searchParams.get("from")), Number(url.searchParams.get("to"))).then(
-      (range) => (range ? reply(200, range) : reply(400, { error: "Khoảng thời gian không hợp lệ." })),
-      () => reply(502, { error: "Không tải được lịch. Thử lại sau." }),
+      (range) => (range ? reply(200, range) : reply(400, { error: L("Khoảng thời gian không hợp lệ.") })),
+      () => reply(502, { error: L("Không tải được lịch. Thử lại sau.") }),
     );
     return;
   }
@@ -738,23 +745,23 @@ function handleRequest(req: http.IncomingMessage, res: http.ServerResponse): voi
     };
     const id = url.searchParams.get("id") ?? "";
     if (req.method === "DELETE") {
-      if (!sameOrigin(req)) return reply(403, { error: "Chỉ nhận thao tác từ chính trang này" });
+      if (!sameOrigin(req)) return reply(403, { error: L("Chỉ nhận thao tác từ chính trang này") });
       trashMail(id).then(
         (done) => {
-          if (!done) return reply(404, { error: "Không tìm thấy thư này." });
+          if (!done) return reply(404, { error: L("Không tìm thấy thư này.") });
           mailCache.delete(id);
           inbox = { ...inbox, accounts: inbox.accounts.map((account) => ({ ...account, recent: account.recent.filter((message) => message.id !== id) })) };
           for (const client of clients) client.write(`event: inbox\ndata: ${JSON.stringify(inbox.fetchedAt)}\n\n`);
           void inboxTick(true);
           reply(200, { ok: true });
         },
-        () => reply(502, { error: "Gmail không trả lời. Thử lại sau." }),
+        () => reply(502, { error: L("Gmail không trả lời. Thử lại sau.") }),
       );
       return;
     }
     cachedMail(id).then(
-      (mail) => (mail ? reply(200, mail) : reply(404, { error: "Không tìm thấy thư này." })),
-      () => reply(502, { error: "Gmail không trả lời. Thử lại sau." }),
+      (mail) => (mail ? reply(200, mail) : reply(404, { error: L("Không tìm thấy thư này.") })),
+      () => reply(502, { error: L("Gmail không trả lời. Thử lại sau.") }),
     );
     return;
   }

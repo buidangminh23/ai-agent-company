@@ -1,3 +1,4 @@
+import { L } from "../shared/i18n.ts";
 import { DatabaseSync } from "node:sqlite";
 import { mkdirSync } from "node:fs";
 import os from "node:os";
@@ -36,10 +37,10 @@ const DAY_MS = 86_400_000;
 const MACHINES = new Set(["WORKSTATION", "SERVER", "LAPTOP"]);
 
 function redact(value: string): string {
-  return value.replace(/\b(?:sk-[\w-]{12,}|gh[pousr]_[\w]{12,}|Bearer\s+[\w.\/+~-]+)/gi, "[đã ẩn]")
-    .replace(/((?:password|passwd|token|secret|api[_-]?key|authorization)\s*[:=]\s*)[^\s,;]+/gi, "$1[đã ẩn]")
+  return value.replace(/\b(?:sk-[\w-]{12,}|gh[pousr]_[\w]{12,}|Bearer\s+[\w.\/+~-]+)/gi, L("[đã ẩn]"))
+    .replace(/((?:password|passwd|token|secret|api[_-]?key|authorization)\s*[:=]\s*)[^\s,;]+/gi, L("$1[đã ẩn]"))
     .replace(/https?:\/\/[^\s<>]+/gi, (value) => {
-      try { const url = new URL(value); return `${url.protocol}//${url.host}${url.pathname}`; } catch { return "[liên kết]"; }
+      try { const url = new URL(value); return `${url.protocol}//${url.host}${url.pathname}`; } catch { return L("[liên kết]"); }
     });
 }
 
@@ -61,17 +62,17 @@ function parseRange(url: URL): RangeFilter {
   const to = url.searchParams.get("to") ?? new Date(now).toISOString();
   const start = Date.parse(from);
   const end = Date.parse(to);
-  if (!Number.isFinite(start) || !Number.isFinite(end) || end < start || end - start > 7 * DAY_MS) throw new Error("Khoảng thời gian phải hợp lệ và không quá 7 ngày");
+  if (!Number.isFinite(start) || !Number.isFinite(end) || end < start || end - start > 7 * DAY_MS) throw new Error(L("Khoảng thời gian phải hợp lệ và không quá 7 ngày"));
   const project = url.searchParams.get("project") || undefined;
   const machine = url.searchParams.get("machine") || undefined;
-  if ((project?.length ?? 0) > 200 || (machine && !MACHINES.has(machine))) throw new Error("Bộ lọc không hợp lệ");
+  if ((project?.length ?? 0) > 200 || (machine && !MACHINES.has(machine))) throw new Error(L("Bộ lọc không hợp lệ"));
   return { from: new Date(start).toISOString(), to: new Date(end).toISOString(), project, machine };
 }
 
 export function vietnamDayRange(date: string): { from: string; to: string } {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new Error("Ngày phải có dạng YYYY-MM-DD");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new Error(L("Ngày phải có dạng YYYY-MM-DD"));
   const start = Date.parse(`${date}T00:00:00+07:00`);
-  if (!Number.isFinite(start) || new Date(start + 7 * 3_600_000).toISOString().slice(0, 10) !== date) throw new Error("Ngày không hợp lệ");
+  if (!Number.isFinite(start) || new Date(start + 7 * 3_600_000).toISOString().slice(0, 10) !== date) throw new Error(L("Ngày không hợp lệ"));
   return { from: new Date(start).toISOString(), to: new Date(start + DAY_MS - 1).toISOString() };
 }
 
@@ -105,7 +106,7 @@ export class OperationsStore {
         this.lastFrame = Date.parse(last.at);
       }
     } catch {
-      this.error = "Không mở được lịch sử trên đĩa; dữ liệu trực tiếp vẫn hoạt động";
+      this.error = L("Không mở được lịch sử trên đĩa; dữ liệu trực tiếp vẫn hoạt động");
       this.db?.close();
       this.db = null;
     }
@@ -117,12 +118,12 @@ export class OperationsStore {
   }
 
   coverage(): HistoryCoverage {
-    if (!this.db) return { from: null, to: null, retentionDays: this.retentionDays, persistent: false, note: this.error || "Lịch sử chưa sẵn sàng" };
+    if (!this.db) return { from: null, to: null, retentionDays: this.retentionDays, persistent: false, note: this.error || L("Lịch sử chưa sẵn sàng") };
     try {
       const range = this.db.prepare("SELECT MIN(at) AS first, MAX(at) AS last FROM (SELECT at FROM frames UNION ALL SELECT at FROM events)").get() as { first: string | null; last: string | null };
-      return { from: range.first, to: range.last, retentionDays: this.retentionDays, persistent: !this.error, note: this.error || "Chỉ gồm dữ liệu đã quan sát; lưu tối đa 7 ngày, 2.880 khung hình và 20.000 sự kiện" };
+      return { from: range.first, to: range.last, retentionDays: this.retentionDays, persistent: !this.error, note: this.error || L("Chỉ gồm dữ liệu đã quan sát; lưu tối đa 7 ngày, 2.880 khung hình và 20.000 sự kiện") };
     } catch {
-      return { from: null, to: null, retentionDays: this.retentionDays, persistent: false, note: "Không đọc được lịch sử trên đĩa" };
+      return { from: null, to: null, retentionDays: this.retentionDays, persistent: false, note: L("Không đọc được lịch sử trên đĩa") };
     }
   }
 
@@ -144,7 +145,7 @@ export class OperationsStore {
       }
       for (const machine of snapshot.machines) {
         const old = this.previous?.machines.find((m) => m.id === machine.id);
-        if (!old || old.online !== machine.online) this.insert({ at: snapshot.generatedAt, kind: "machine", title: machine.id, detail: machine.online ? "Đã kết nối collector" : "Chưa kết nối collector", machine: machine.id });
+        if (!old || old.online !== machine.online) this.insert({ at: snapshot.generatedAt, kind: "machine", title: machine.id, detail: machine.online ? L("Đã kết nối collector") : L("Chưa kết nối collector"), machine: machine.id });
       }
       for (const site of snapshot.sites) {
         const old = this.previous?.sites.find((s) => s.url === site.url);
@@ -159,7 +160,7 @@ export class OperationsStore {
       const currentAlerts = deriveOperations(snapshot, coverage).attention.filter((a) => a.kind === "stalled" || a.kind === "conflict" || a.id.startsWith("repeated:"));
       const oldAlerts = this.previous ? deriveOperations(this.previous, coverage).attention.filter((a) => a.kind === "stalled" || a.kind === "conflict" || a.id.startsWith("repeated:")) : [];
       for (const alert of currentAlerts) if (!oldAlerts.some((old) => old.id === alert.id && old.detail === alert.detail)) this.insert({ at: snapshot.generatedAt, kind: "alert", title: alert.title, detail: alert.detail, agentId: alert.agentIds[0], project: alert.project, machine: alert.machine, url: alert.url });
-      for (const alert of oldAlerts) if (!currentAlerts.some((current) => current.id === alert.id)) this.insert({ at: snapshot.generatedAt, kind: "alert", title: alert.title, detail: "Dấu hiệu cảnh báo không còn xuất hiện trong dữ liệu hiện tại", agentId: alert.agentIds[0], project: alert.project, machine: alert.machine });
+      for (const alert of oldAlerts) if (!currentAlerts.some((current) => current.id === alert.id)) this.insert({ at: snapshot.generatedAt, kind: "alert", title: alert.title, detail: L("Dấu hiệu cảnh báo không còn xuất hiện trong dữ liệu hiện tại"), agentId: alert.agentIds[0], project: alert.project, machine: alert.machine });
       const quotaAt = snapshot.quota.fetchedAt;
       const quotaSignature = JSON.stringify([quotaAt, snapshot.quota.rows]);
       if (snapshot.quota.connected && quotaAt && Number.isFinite(Date.parse(quotaAt)) && quotaSignature !== this.lastQuota) {
@@ -184,7 +185,7 @@ export class OperationsStore {
       this.error = "";
     } catch {
       try { this.db.exec("ROLLBACK"); } catch {}
-      this.error = "Không ghi được lịch sử; có thể thiếu dữ liệu trong khoảng này";
+      this.error = L("Không ghi được lịch sử; có thể thiếu dữ liệu trong khoảng này");
     }
   }
 
@@ -208,32 +209,32 @@ export class OperationsStore {
     try {
       const rows = this.db?.prepare("SELECT at,row FROM quota_samples ORDER BY at DESC LIMIT 20000").all() as { at: string; row: string }[] | undefined;
       samples = rows?.map((r) => ({ at: r.at, row: JSON.parse(r.row) })) ?? [];
-    } catch { this.error = "Không đọc được dữ liệu dự báo hạn mức"; }
+    } catch { this.error = L("Không đọc được dữ liệu dự báo hạn mức"); }
     return deriveOperations({ ...snapshot, agents: snapshot.agents.map((a) => this.verifiedAgent(a)) }, this.coverage(), samples);
   }
 
   private verifiedAgent(agent: AgentInfo, before = "9999-12-31T23:59:59.999Z"): AgentInfo {
     if (!this.db || agent.outcome?.status !== "completed") return agent;
     const review = this.db.prepare("SELECT evidence FROM verifications WHERE agentId = ? AND outcomeAt = ? AND at <= ?").get(agent.id, agent.outcome.at, before) as { evidence: string } | undefined;
-    return review ? { ...agent, outcome: { ...agent.outcome, verified: true, summary: `Sếp đã nghiệm thu: ${review.evidence}` } } : agent;
+    return review ? { ...agent, outcome: { ...agent.outcome, verified: true, summary: L("Sếp đã nghiệm thu: {0}", review.evidence) } } : agent;
   }
 
   verify(snapshot: Snapshot, agentId: string, outcomeAt: string, evidence: string): void {
-    if (!this.db) throw new Error("Không ghi được nghiệm thu");
+    if (!this.db) throw new Error(L("Không ghi được nghiệm thu"));
     const agent = snapshot.agents.find((a) => a.id === agentId);
-    if (!agent || agent.state !== "idle" || agent.pending || agent.outcome?.status !== "completed" || agent.outcome.at !== outcomeAt) throw new Error("Lượt công việc đã thay đổi; tải lại trước khi nghiệm thu");
-    if (!snapshot.machines.some((m) => m.id === agent.machine && m.online)) throw new Error("Máy đã mất kết nối; tải lại trước khi nghiệm thu");
+    if (!agent || agent.state !== "idle" || agent.pending || agent.outcome?.status !== "completed" || agent.outcome.at !== outcomeAt) throw new Error(L("Lượt công việc đã thay đổi; tải lại trước khi nghiệm thu"));
+    if (!snapshot.machines.some((m) => m.id === agent.machine && m.online)) throw new Error(L("Máy đã mất kết nối; tải lại trước khi nghiệm thu"));
     const clean = redact(evidence.trim()).slice(0, 1000);
-    if (!clean) throw new Error("Bằng chứng nghiệm thu không hợp lệ");
+    if (!clean) throw new Error(L("Bằng chứng nghiệm thu không hợp lệ"));
     const at = new Date().toISOString();
     try {
       this.db.exec("BEGIN IMMEDIATE");
       const result = this.db.prepare("INSERT OR IGNORE INTO verifications (agentId,outcomeAt,at,evidence,data) VALUES (?,?,?,?,?)").run(agentId, outcomeAt, at, clean, JSON.stringify(safeAgent(agent)));
-      if (result.changes) this.insert({ at, kind: "outcome", title: agent.title, detail: `Sếp đã nghiệm thu: ${clean}`, agentId: agent.id, project: agent.project, machine: agent.machine, url: agent.nativeUrl }, this.verifiedAgent(agent));
+      if (result.changes) this.insert({ at, kind: "outcome", title: agent.title, detail: L("Sếp đã nghiệm thu: {0}", clean), agentId: agent.id, project: agent.project, machine: agent.machine, url: agent.nativeUrl }, this.verifiedAgent(agent));
       this.db.exec("COMMIT");
     } catch {
       try { this.db.exec("ROLLBACK"); } catch {}
-      throw new Error("Không ghi được nghiệm thu");
+      throw new Error(L("Không ghi được nghiệm thu"));
     }
   }
 
@@ -287,13 +288,13 @@ export class OperationsStore {
       for (const review of reviews) {
         const agent = JSON.parse(review.data) as AgentInfo;
         if (!matches(agent, filter) || completed.some((t) => t.agent.id === agent.id && t.agent.outcome?.at === review.outcomeAt)) continue;
-        completed.push({ ...taskCard({ ...agent, pending: null, outcome: { status: "completed", at: review.outcomeAt, summary: `Sếp đã nghiệm thu: ${review.evidence}`, verified: true } }, false), id: `${agent.id}:${review.outcomeAt}` });
+        completed.push({ ...taskCard({ ...agent, pending: null, outcome: { status: "completed", at: review.outcomeAt, summary: L("Sếp đã nghiệm thu: {0}", review.evidence), verified: true } }, false), id: `${agent.id}:${review.outcomeAt}` });
       }
     }
     const review = tasks.filter((t) => t.stage === "review");
     const unfinished = tasks.filter((t) => !["completed", "review"].includes(t.stage));
     const attention = snapshot ? this.operations({ ...snapshot, agents: [...agents.values()] }).attention.filter((a) => (!filter.project || a.project === filter.project) && (!filter.machine || a.machine === filter.machine)) : [];
-    return { date, timezone: "Asia/Ho_Chi_Minh", coverage: history.coverage, completed, review, unfinished, attention, events: history.events, summary: `${completed.length} việc có bằng chứng hoàn tất; ${review.length} lượt cần xem lại; ${unfinished.length} việc còn dở; ${attention.length} mục cần xử lý trong dữ liệu đã ghi nhận.`, truncated: history.truncated };
+    return { date, timezone: "Asia/Ho_Chi_Minh", coverage: history.coverage, completed, review, unfinished, attention, events: history.events, summary: L("{0} việc có bằng chứng hoàn tất; {1} lượt cần xem lại; {2} việc còn dở; {3} mục cần xử lý trong dữ liệu đã ghi nhận.", completed.length, review.length, unfinished.length, attention.length), truncated: history.truncated };
   }
 
   handle(req: IncomingMessage, res: ServerResponse, url: URL, snapshot: Snapshot, latestSnapshot: () => Snapshot = () => snapshot): boolean {
@@ -324,8 +325,9 @@ export class OperationsStore {
       res.writeHead(200, { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" });
       res.end(req.method === "HEAD" ? undefined : JSON.stringify(result));
     } catch (error) {
-      const message = error instanceof Error && /hợp lệ|YYYY-MM-DD|7 ngày/.test(error.message) ? error.message : "Không đọc được lịch sử; thử lại sau";
-      res.writeHead(message.startsWith("Không đọc") ? 503 : 400, { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" });
+      const invalid = error instanceof Error && /hợp lệ|invalid|YYYY-MM-DD|7 ngày|7 days/i.test(error.message);
+      const message = invalid ? (error as Error).message : L("Không đọc được lịch sử; thử lại sau");
+      res.writeHead(invalid ? 400 : 503, { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" });
       res.end(JSON.stringify({ error: message }));
     }
     return true;
@@ -344,11 +346,11 @@ export class OperationsStore {
       const origin = new URL(String(req.headers.origin ?? ""));
       if (!["http:", "https:"].includes(origin.protocol) || origin.host !== req.headers.host || (req.headers["sec-fetch-site"] && req.headers["sec-fetch-site"] !== "same-origin")) throw new Error("origin");
     } catch {
-      reply(403, { error: "Chỉ nhận nghiệm thu từ giao diện cùng nguồn" });
+      reply(403, { error: L("Chỉ nhận nghiệm thu từ giao diện cùng nguồn") });
       return;
     }
     if (!String(req.headers["content-type"] ?? "").startsWith("application/json")) {
-      reply(415, { error: "Yêu cầu JSON" });
+      reply(415, { error: L("Yêu cầu JSON") });
       return;
     }
     let body = "";
@@ -359,7 +361,7 @@ export class OperationsStore {
       body += chunk;
       if (Buffer.byteLength(body) > 4096) {
         tooLarge = true;
-        reply(413, { error: "Nội dung quá dài" });
+        reply(413, { error: L("Nội dung quá dài") });
       }
     });
     req.on("end", () => {
@@ -369,15 +371,15 @@ export class OperationsStore {
         data = JSON.parse(body);
         if (!data || typeof data.agentId !== "string" || data.agentId.length > 300 || typeof data.outcomeAt !== "string" || !Number.isFinite(Date.parse(data.outcomeAt)) || typeof data.evidence !== "string" || !data.evidence.trim() || data.evidence.length > 1000) throw new Error("input");
       } catch {
-        reply(400, { error: "Dữ liệu nghiệm thu không hợp lệ" });
+        reply(400, { error: L("Dữ liệu nghiệm thu không hợp lệ") });
         return;
       }
       try {
         this.verify(latestSnapshot(), data.agentId, data.outcomeAt, data.evidence);
         reply(200, { ok: true });
       } catch (error) {
-        const message = error instanceof Error ? error.message : "Không ghi được nghiệm thu";
-        reply(/tải lại/.test(message) ? 409 : 503, { error: /tải lại|Không ghi|không hợp lệ/.test(message) ? message : "Không ghi được nghiệm thu" });
+        const message = error instanceof Error ? error.message : L("Không ghi được nghiệm thu");
+        reply(/tải lại/.test(message) ? 409 : 503, { error: /tải lại|Không ghi|không hợp lệ/.test(message) ? message : L("Không ghi được nghiệm thu") });
       }
     });
   }

@@ -1,3 +1,4 @@
+import { L, locale } from "../shared/i18n.ts";
 import { MACHINE_LABELS, MACHINE_ORDER, type AgentMessage, type MachineId, type MessageStatus, type Snapshot } from "../shared/types.ts";
 import { messageStatus, messageStatusLabel } from "../shared/messages.ts";
 import { mergeDispatchReceipt, type DispatchList, type DispatchReceipt, type DispatchTarget } from "../shared/dispatch.ts";
@@ -16,7 +17,7 @@ function isReceipt(value: unknown): value is DispatchReceipt {
 }
 
 function date(value: string): string {
-  return Number.isFinite(Date.parse(value)) ? new Date(value).toLocaleString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" }) : "Chưa rõ thời điểm";
+  return Number.isFinite(Date.parse(value)) ? new Date(value).toLocaleString(locale(), { timeZone: "Asia/Ho_Chi_Minh", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" }) : L("Chưa rõ thời điểm");
 }
 
 function tone(status: MessageStatus): string {
@@ -40,17 +41,17 @@ export function communicationMachines(snapshot: Snapshot | null, connected: bool
     const machine = snapshot?.machines.find((entry) => entry.id === id);
     const online = connected && machine?.online === true;
     const count = snapshot?.agents.filter((agent) => agent.machine === id).length ?? 0;
-    return `<article class="comm-machine" data-online="${online}"><span class="comm-machine-dot" aria-hidden="true"></span><div><strong>${text(MACHINE_LABELS[id])}</strong><small>${text(id)}</small></div><span class="comm-machine-state">${!connected ? "Chờ kết nối hub" : !machine ? "Chưa có dữ liệu" : online ? "Đang kết nối" : "Mất kết nối"}<small>${count} agent${machine ? ` · ${text(date(machine.checkedAt))}` : ""}</small></span></article>`;
+    return `<article class="comm-machine" data-online="${online}"><span class="comm-machine-dot" aria-hidden="true"></span><div><strong>${text(MACHINE_LABELS[id])}</strong><small>${text(id)}</small></div><span class="comm-machine-state">${!connected ? L("Chờ kết nối hub") : !machine ? L("Chưa có dữ liệu") : online ? L("Đang kết nối") : L("Mất kết nối")}<small>${count} agent${machine ? ` · ${text(date(machine.checkedAt))}` : ""}</small></span></article>`;
   }).join("");
 }
 
 export function communicationMessage(message: AgentMessage, snapshot: Snapshot | null): string {
   const sender = snapshot?.agents.find((agent) => agent.id === message.fromId);
   const receiver = snapshot?.agents.find((agent) => agent.id === message.toId);
-  const from = message.fromId === "human-web" ? "Sếp · Dashboard" : sender ? `${APP_NAMES[sender.app]} · ${MACHINE_LABELS[sender.machine]}` : "Phiên gửi không còn trong văn phòng";
-  const to = receiver ? `${APP_NAMES[receiver.app]} · ${MACHINE_LABELS[receiver.machine]}` : message.targetLabel || (message.targetMachine ? MACHINE_LABELS[message.targetMachine] : "Chưa xác định người nhận");
+  const from = message.fromId === "human-web" ? L("Sếp · Dashboard") : sender ? `${APP_NAMES[sender.app]} · ${MACHINE_LABELS[sender.machine]}` : L("Phiên gửi không còn trong văn phòng");
+  const to = receiver ? `${APP_NAMES[receiver.app]} · ${MACHINE_LABELS[receiver.machine]}` : message.targetLabel || (message.targetMachine ? MACHINE_LABELS[message.targetMachine] : L("Chưa xác định người nhận"));
   const offline = receiver && snapshot?.machines.find((machine) => machine.id === receiver.machine)?.online === false;
-  return `<article class="comm-message"><div class="comm-message-top"><span class="comm-route"><b>${text(from)}</b><span aria-label="gửi tới">→</span><b>${text(to)}</b></span>${statusMarkup(messageStatus(message))}</div><p class="comm-summary">${text(message.summary)}</p>${message.detail ? `<p class="comm-detail">${text(message.detail)}</p>` : ""}${!receiver ? '<p class="comm-detail">Chưa ghép được đúng phiên nhận; chưa thể xác nhận giao nhận.</p>' : offline ? '<p class="comm-detail">Máy nhận hiện mất kết nối; trạng thái trên là bằng chứng gần nhất.</p>' : ""}<footer><span>${text(message.via)}${message.replyTo ? " · Phản hồi có liên kết" : ""}</span><time datetime="${text(message.updatedAt ?? message.at)}">${text(date(message.updatedAt ?? message.at))}</time></footer></article>`;
+  return L("<article class=\"comm-message\"><div class=\"comm-message-top\"><span class=\"comm-route\"><b>{0}</b><span aria-label=\"gửi tới\">→</span><b>{1}</b></span>{2}</div><p class=\"comm-summary\">{3}</p>{4}{5}<footer><span>{6}{7}</span><time datetime=\"{8}\">{9}</time></footer></article>", text(from), text(to), statusMarkup(messageStatus(message)), text(message.summary), message.detail ? `<p class="comm-detail">${text(message.detail)}</p>` : "", !receiver ? L("<p class=\"comm-detail\">Chưa ghép được đúng phiên nhận; chưa thể xác nhận giao nhận.</p>") : offline ? L("<p class=\"comm-detail\">Máy nhận hiện mất kết nối; trạng thái trên là bằng chứng gần nhất.</p>") : "", text(message.via), message.replyTo ? L(" · Phản hồi có liên kết") : "", text(message.updatedAt ?? message.at), text(date(message.updatedAt ?? message.at)));
 }
 
 export class CommunicationsBoard {
@@ -88,7 +89,7 @@ export class CommunicationsBoard {
   update(snapshot: Snapshot | null, connected: boolean, replay = false): void {
     this.snapshot = snapshot;
     this.connected = connected;
-    if (this.replay && !replay && this.formError === "Đang xem lại lịch sử; trở về Trực tiếp để giao việc.") this.formError = "";
+    if (this.replay && !replay && this.formError === L("Đang xem lại lịch sử; trở về Trực tiếp để giao việc.")) this.formError = "";
     this.replay = replay;
     if (replay) return;
     for (const message of snapshot?.messages ?? []) {
@@ -104,15 +105,15 @@ export class CommunicationsBoard {
     if (!this.data) this.changed();
     try {
       const response = await fetch("/api/communications", { cache: "no-store", signal: AbortSignal.timeout(30_000) });
-      if (!response.ok) throw new Error(response.status === 401 ? "Đăng nhập bằng mã truy cập để mở kênh giao việc." : `Chưa đọc được kênh giao tiếp (${response.status}).`);
+      if (!response.ok) throw new Error(response.status === 401 ? L("Đăng nhập bằng mã truy cập để mở kênh giao việc.") : L("Chưa đọc được kênh giao tiếp ({0}).", response.status));
       const data = await response.json() as DispatchList;
-      if (!Array.isArray(data.targets) || !Array.isArray(data.receipts)) throw new Error("Dữ liệu kênh giao tiếp chưa hợp lệ.");
+      if (!Array.isArray(data.targets) || !Array.isArray(data.receipts)) throw new Error(L("Dữ liệu kênh giao tiếp chưa hợp lệ."));
       this.data = data;
       for (const receipt of data.receipts) if (isReceipt(receipt)) this.merge(receipt);
       this.save();
       this.error = "";
     } catch (error) {
-      this.error = error instanceof Error ? error.message : "Chưa nối được kênh giao tiếp.";
+      this.error = error instanceof Error ? error.message : L("Chưa nối được kênh giao tiếp.");
     } finally {
       this.loading = false;
       this.changed();
@@ -148,7 +149,7 @@ export class CommunicationsBoard {
     if (target.dataset.commDraft === undefined) return false;
     if (!this.activeId && !this.submitting) this.draft = target.value;
     const count = target.closest("form")?.querySelector("[data-comm-count]");
-    if (count) count.textContent = `${this.draft.length.toLocaleString("vi-VN")} / ${LIMIT.toLocaleString("vi-VN")}`;
+    if (count) count.textContent = `${this.draft.length.toLocaleString(locale())} / ${LIMIT.toLocaleString(locale())}`;
     return true;
   }
 
@@ -193,22 +194,22 @@ export class CommunicationsBoard {
   }
 
   private async send(): Promise<void> {
-    if (this.replay) { this.formError = "Đang xem lại lịch sử; trở về Trực tiếp để giao việc."; this.changed(); return; }
+    if (this.replay) { this.formError = L("Đang xem lại lịch sử; trở về Trực tiếp để giao việc."); this.changed(); return; }
     if (this.submitting || this.activeId) return;
     const target = this.selected();
     const message = this.draft.trim();
     if (!target || !this.available(target) || !message || message.length > LIMIT) {
-      this.formError = !message ? "Nhập nội dung cần gửi." : "Chọn đúng phiên đang có kênh gửi khả dụng.";
+      this.formError = !message ? L("Nhập nội dung cần gửi.") : L("Chọn đúng phiên đang có kênh gửi khả dụng.");
       this.changed();
       return;
     }
     const id = uuid();
     const at = new Date().toISOString();
-    const pending: DispatchReceipt = { id, status: "sending", targetAgentId: target.agentId, targetMachine: target.machine, summary: "Tin nhắn từ sếp", at, updatedAt: at, detail: "Đang gửi yêu cầu; chờ biên nhận từ máy đích.", author: "human-web" };
+    const pending: DispatchReceipt = { id, status: "sending", targetAgentId: target.agentId, targetMachine: target.machine, summary: L("Tin nhắn từ sếp"), at, updatedAt: at, detail: L("Đang gửi yêu cầu; chờ biên nhận từ máy đích."), author: "human-web" };
     this.receipts.set(id, pending);
     if (!this.save()) {
       this.receipts.delete(id);
-      this.formError = "Trình duyệt chưa lưu được mã gửi để chống gửi trùng. Chưa gửi nội dung.";
+      this.formError = L("Trình duyệt chưa lưu được mã gửi để chống gửi trùng. Chưa gửi nội dung.");
       this.changed();
       return;
     }
@@ -220,10 +221,10 @@ export class CommunicationsBoard {
       const response = await fetch("/api/communications", { method: "POST", headers: { "content-type": "application/json", "x-msc-communication": "human-web" }, body: JSON.stringify({ requestId: id, targetAgentId: target.agentId, targetMachine: target.machine, message }), signal: AbortSignal.timeout(45_000) });
       const result = await response.json();
       if (isReceipt(result) && result.id === id && result.targetAgentId === target.agentId && result.targetMachine === target.machine) this.merge(result);
-      else if ([400, 401, 403, 413, 415, 422].includes(response.status)) this.merge({ ...pending, status: "failed", updatedAt: new Date().toISOString(), detail: typeof result?.error === "string" ? result.error : "Yêu cầu bị từ chối trước khi gửi tới agent." });
-      else throw new Error(typeof result?.error === "string" ? result.error : `Chưa nhận được biên nhận (${response.status}).`);
+      else if ([400, 401, 403, 413, 415, 422].includes(response.status)) this.merge({ ...pending, status: "failed", updatedAt: new Date().toISOString(), detail: typeof result?.error === "string" ? result.error : L("Yêu cầu bị từ chối trước khi gửi tới agent.") });
+      else throw new Error(typeof result?.error === "string" ? result.error : L("Chưa nhận được biên nhận ({0}).", response.status));
     } catch (error) {
-      this.merge({ ...pending, status: "unknown", updatedAt: new Date().toISOString(), detail: `${error instanceof Error ? error.message : "Mất kết nối khi gửi."} Chưa rõ máy đích đã nhận hay chưa; kiểm tra biên nhận trước khi tạo tin mới.` });
+      this.merge({ ...pending, status: "unknown", updatedAt: new Date().toISOString(), detail: L("{0} Chưa rõ máy đích đã nhận hay chưa; kiểm tra biên nhận trước khi tạo tin mới.", error instanceof Error ? error.message : L("Mất kết nối khi gửi.")) });
     } finally {
       this.submitting = false;
       this.save();
@@ -239,19 +240,19 @@ export class CommunicationsBoard {
     this.changed();
     try {
       const response = await fetch(`/api/communications/${encodeURIComponent(id)}?machine=${encodeURIComponent(receipt.targetMachine)}`, { cache: "no-store", signal: AbortSignal.timeout(30_000) });
-      if (!response.ok) throw new Error(`Chưa đọc được biên nhận (${response.status}).`);
+      if (!response.ok) throw new Error(L("Chưa đọc được biên nhận ({0}).", response.status));
       const result = await response.json();
       if (isReceipt(result) && result.id === id && result.targetAgentId === receipt.targetAgentId && result.targetMachine === receipt.targetMachine) this.merge(result);
-      else this.formError = "Chưa tìm thấy biên nhận. Không tự gửi lại; kiểm tra chat trên máy đích.";
+      else this.formError = L("Chưa tìm thấy biên nhận. Không tự gửi lại; kiểm tra chat trên máy đích.");
       this.save();
-    } catch (error) { this.formError = error instanceof Error ? error.message : "Chưa kiểm tra được biên nhận."; }
+    } catch (error) { this.formError = error instanceof Error ? error.message : L("Chưa kiểm tra được biên nhận."); }
     finally { this.checking.delete(id); this.changed(); }
   }
 
   private receiptMarkup(receipt: DispatchReceipt): string {
     const agent = this.snapshot?.agents.find((entry) => entry.id === receipt.targetAgentId && entry.machine === receipt.targetMachine);
     const target = agent ? `${APP_NAMES[agent.app]} · ${MACHINE_LABELS[agent.machine]}` : MACHINE_LABELS[receipt.targetMachine];
-    return `<article class="comm-message comm-human"><div class="comm-message-top"><span class="comm-route"><b>Sếp</b><span aria-label="gửi tới">→</span><b>${text(target)}</b></span>${statusMarkup(receipt.status)}</div><p class="comm-summary">${text(receipt.summary)}</p><p class="comm-detail">${text(receipt.detail)}</p><footer><span>Giao việc từ dashboard</span><time datetime="${text(receipt.updatedAt)}">${text(date(receipt.updatedAt))}</time>${OPEN_STATUSES.has(receipt.status) || receipt.status === "accepted" ? `<button type="button" data-comm-action="check" data-receipt="${text(receipt.id)}" data-key="comm-check:${text(receipt.id)}" ${this.checking.has(receipt.id) ? "disabled" : ""}>${this.checking.has(receipt.id) ? "Đang kiểm tra…" : "Kiểm tra biên nhận"}</button>` : ""}</footer></article>`;
+    return L("<article class=\"comm-message comm-human\"><div class=\"comm-message-top\"><span class=\"comm-route\"><b>Sếp</b><span aria-label=\"gửi tới\">→</span><b>{0}</b></span>{1}</div><p class=\"comm-summary\">{2}</p><p class=\"comm-detail\">{3}</p><footer><span>Giao việc từ dashboard</span><time datetime=\"{4}\">{5}</time>{6}</footer></article>", text(target), statusMarkup(receipt.status), text(receipt.summary), text(receipt.detail), text(receipt.updatedAt), text(date(receipt.updatedAt)), OPEN_STATUSES.has(receipt.status) || receipt.status === "accepted" ? `<button type="button" data-comm-action="check" data-receipt="${text(receipt.id)}" data-key="comm-check:${text(receipt.id)}" ${this.checking.has(receipt.id) ? "disabled" : ""}>${this.checking.has(receipt.id) ? L("Đang kiểm tra…") : L("Kiểm tra biên nhận")}</button>` : "");
   }
 
   markup(embedded = false): string {
@@ -261,16 +262,16 @@ export class CommunicationsBoard {
     const targets = this.data?.targets ?? [];
     const groups = MACHINE_ORDER.map((machine) => {
       const entries = targets.filter((target) => target.machine === machine);
-      return entries.length ? `<optgroup label="${text(MACHINE_LABELS[machine])}">${entries.map((target) => `<option value="${text(`${machine}:${target.agentId}`)}" ${target.agentId === this.targetId && machine === this.targetMachine ? "selected" : ""}>${text(`${APP_NAMES[target.app]} · ${target.project || target.title} · ${target.title}`)}${target.available ? "" : " — Chưa khả dụng"}</option>`).join("")}</optgroup>` : "";
+      return entries.length ? `<optgroup label="${text(MACHINE_LABELS[machine])}">${entries.map((target) => `<option value="${text(`${machine}:${target.agentId}`)}" ${target.agentId === this.targetId && machine === this.targetMachine ? "selected" : ""}>${text(`${APP_NAMES[target.app]} · ${target.project || target.title} · ${target.title}`)}${target.available ? "" : L(" — Chưa khả dụng")}</option>`).join("")}</optgroup>` : "";
     }).join("");
     const observed = (this.snapshot?.messages ?? []).filter((message) => (this.replay || !this.receipts.has(message.id)) && (!this.filter || message.targetMachine === this.filter || this.snapshot?.agents.some((agent) => agent.machine === this.filter && (agent.id === message.fromId || agent.id === message.toId))));
     const receipts = (this.replay ? [] : [...this.receipts.values()]).filter((receipt) => !this.filter || receipt.targetMachine === this.filter);
     const history = [...observed.map((message) => ({ at: message.updatedAt ?? message.at, html: communicationMessage(message, this.snapshot) })), ...receipts.map((receipt) => ({ at: receipt.updatedAt, html: this.receiptMarkup(receipt) }))].sort((a, b) => b.at.localeCompare(a.at)).slice(0, 80);
     const visibleHistory = embedded && !this.expanded ? history.slice(0, 4) : history;
-    const reason = this.replay ? "Đang xem lại lịch sử; trở về Trực tiếp để giao việc." : !this.connected ? "Chờ hub kết nối lại trước khi gửi." : this.error || selected?.reason || (!selected ? "Chọn máy và phiên nhận để kiểm tra kênh gửi." : !this.available(selected) ? "Máy đích chưa sẵn sàng nhận tin." : "Nội dung gửi với danh nghĩa của sếp vào đúng chat đã chọn.");
-    const compose = `<section class="comm-compose" id="comm-compose"><h3>Gửi việc đến agent</h3>${embedded ? "" : '<p class="comm-note">Chọn phiên đang có trên một trong ba máy. Trạng thái nhận tin chỉ cập nhật khi có biên nhận.</p>'}<form data-comm-form><label for="comm-target">Máy / phiên nhận</label><select id="comm-target" data-comm-target data-key="comm-target" ${active || this.submitting || this.replay ? "disabled" : ""}><option value="">${this.loading && !this.data ? "Đang kiểm tra kênh gửi…" : "Chọn phiên nhận"}</option>${groups}</select><p class="comm-capability" id="comm-capability">${text(reason)}</p><label for="comm-draft">Nội dung giao việc</label><textarea id="comm-draft" data-comm-draft data-key="comm-draft" rows="${embedded ? 4 : 7}" maxlength="${LIMIT}" aria-describedby="comm-capability" placeholder="Mô tả việc cần làm, kết quả mong muốn và giới hạn…" ${active || this.submitting || this.replay ? "readonly" : ""}>${text(this.draft)}</textarea><div class="comm-compose-footer"><small data-comm-count>${this.draft.length.toLocaleString("vi-VN")} / ${LIMIT.toLocaleString("vi-VN")}</small><button type="submit" class="ops-primary" ${canSend ? "" : "disabled"}>${this.submitting ? "Đang gửi…" : "Gửi việc"}</button></div>${this.formError ? `<p class="comm-error" role="alert">${text(this.formError)}</p>` : ""}</form>${active && !this.replay ? `<div class="comm-result" role="status">${statusMarkup(active.status)}<p>${text(active.detail)}</p>${OPEN_STATUSES.has(active.status) ? `<button type="button" data-comm-action="check" data-receipt="${text(active.id)}" data-key="comm-active-check" ${this.checking.has(active.id) ? "disabled" : ""}>Kiểm tra biên nhận</button>` : ""}${!this.submitting ? `<button type="button" data-comm-action="new" data-key="comm-new">${OPEN_STATUSES.has(active.status) ? "Soạn việc khác" : "Soạn việc mới"}</button>` : ""}</div>` : ""}<div class="comm-legend"><strong>Đọc đúng trạng thái</strong><p>“Đã tiếp nhận” là kênh gửi đã chấp nhận yêu cầu. “Đã nhận” và “Đã phản hồi” cần bằng chứng từ ứng dụng đích.</p></div></section>`;
-    const historyMarkup = `<section class="comm-history"><div class="comm-history-heading"><div><h3>Nhật ký giao tiếp</h3><p>${history.length} lượt gần nhất${this.filter ? ` · ${text(MACHINE_LABELS[this.filter])}` : ""}</p></div><label class="comm-filter">Máy<select data-comm-filter data-key="comm-filter"><option value="">Tất cả máy</option>${MACHINE_ORDER.map((machine) => `<option value="${machine}" ${this.filter === machine ? "selected" : ""}>${text(MACHINE_LABELS[machine])}</option>`).join("")}</select></label></div>${this.error ? `<p class="comm-error" role="alert">${text(this.error)} <button type="button" data-comm-action="refresh" data-key="comm-refresh">Kiểm tra lại</button></p>` : ""}${history.length ? `<div class="comm-feed">${visibleHistory.map((item) => item.html).join("")}</div>` : '<div class="comm-empty"><strong>Chưa có trao đổi được ghi nhận</strong><p>Khi agent gửi tin qua kênh được hỗ trợ hoặc sếp giao việc tại đây, người gửi, máy nhận và biên nhận sẽ xuất hiện.</p></div>'}${embedded && history.length > 4 ? `<button type="button" class="comm-expand" data-comm-action="expand" data-key="comm-expand" aria-expanded="${this.expanded}">${this.expanded ? "Thu gọn" : `Xem thêm ${history.length - 4} lượt`}</button>` : ""}</section>`;
-    const heading = embedded ? `<header class="comm-embedded-heading"><div><h3>Giao tiếp</h3><span class="comm-caption">${this.replay ? "Lịch sử trao đổi" : this.connected ? "Trao đổi giữa các máy" : "Chờ kết nối hub"}</span></div><button type="button" class="ops-primary" data-comm-action="compose" data-key="comm-compose-toggle" aria-controls="comm-compose" aria-expanded="${this.composerOpen}">${this.composerOpen ? "Đóng" : "Giao việc"}</button></header>` : `<div class="comm-intro"><div><h2>Giao tiếp giữa các máy</h2><p>Theo dõi trao đổi thật giữa agent và giao việc vào đúng phiên.</p></div><span class="comm-live" data-connected="${this.connected}">${this.connected ? "Đang nhận dữ liệu" : "Chờ kết nối"}</span></div><div class="comm-machines">${communicationMachines(this.snapshot, this.connected)}</div>`;
-    return `<div class="comm-board${embedded ? " comm-embedded" : ""}">${heading}${this.replay ? '<p class="comm-replay-notice" role="status">Đang xem lại lịch sử; trở về Trực tiếp để giao việc.</p>' : ""}<div class="comm-layout">${!embedded || this.composerOpen ? compose : ""}${historyMarkup}</div></div>`;
+    const reason = this.replay ? L("Đang xem lại lịch sử; trở về Trực tiếp để giao việc.") : !this.connected ? L("Chờ hub kết nối lại trước khi gửi.") : this.error || selected?.reason || (!selected ? L("Chọn máy và phiên nhận để kiểm tra kênh gửi.") : !this.available(selected) ? L("Máy đích chưa sẵn sàng nhận tin.") : L("Nội dung gửi với danh nghĩa của sếp vào đúng chat đã chọn."));
+    const compose = L("<section class=\"comm-compose\" id=\"comm-compose\"><h3>Gửi việc đến agent</h3>{0}<form data-comm-form><label for=\"comm-target\">Máy / phiên nhận</label><select id=\"comm-target\" data-comm-target data-key=\"comm-target\" {1}><option value=\"\">{2}</option>{3}</select><p class=\"comm-capability\" id=\"comm-capability\">{4}</p><label for=\"comm-draft\">Nội dung giao việc</label><textarea id=\"comm-draft\" data-comm-draft data-key=\"comm-draft\" rows=\"{5}\" maxlength=\"{6}\" aria-describedby=\"comm-capability\" placeholder=\"Mô tả việc cần làm, kết quả mong muốn và giới hạn…\" {7}>{8}</textarea><div class=\"comm-compose-footer\"><small data-comm-count>{9} / {10}</small><button type=\"submit\" class=\"ops-primary\" {11}>{12}</button></div>{13}</form>{14}<div class=\"comm-legend\"><strong>Đọc đúng trạng thái</strong><p>“Đã tiếp nhận” là kênh gửi đã chấp nhận yêu cầu. “Đã nhận” và “Đã phản hồi” cần bằng chứng từ ứng dụng đích.</p></div></section>", embedded ? "" : L("<p class=\"comm-note\">Chọn phiên đang có trên một trong ba máy. Trạng thái nhận tin chỉ cập nhật khi có biên nhận.</p>"), active || this.submitting || this.replay ? "disabled" : "", this.loading && !this.data ? L("Đang kiểm tra kênh gửi…") : L("Chọn phiên nhận"), groups, text(reason), embedded ? 4 : 7, LIMIT, active || this.submitting || this.replay ? "readonly" : "", text(this.draft), this.draft.length.toLocaleString(locale()), LIMIT.toLocaleString(locale()), canSend ? "" : "disabled", this.submitting ? L("Đang gửi…") : L("Gửi việc"), this.formError ? `<p class="comm-error" role="alert">${text(this.formError)}</p>` : "", active && !this.replay ? `<div class="comm-result" role="status">${statusMarkup(active.status)}<p>${text(active.detail)}</p>${OPEN_STATUSES.has(active.status) ? L("<button type=\"button\" data-comm-action=\"check\" data-receipt=\"{0}\" data-key=\"comm-active-check\" {1}>Kiểm tra biên nhận</button>", text(active.id), this.checking.has(active.id) ? "disabled" : "") : ""}${!this.submitting ? `<button type="button" data-comm-action="new" data-key="comm-new">${OPEN_STATUSES.has(active.status) ? L("Soạn việc khác") : L("Soạn việc mới")}</button>` : ""}</div>` : "");
+    const historyMarkup = L("<section class=\"comm-history\"><div class=\"comm-history-heading\"><div><h3>Nhật ký giao tiếp</h3><p>{0} lượt gần nhất{1}</p></div><label class=\"comm-filter\">Máy<select data-comm-filter data-key=\"comm-filter\"><option value=\"\">Tất cả máy</option>{2}</select></label></div>{3}{4}{5}</section>", history.length, this.filter ? ` · ${text(MACHINE_LABELS[this.filter])}` : "", MACHINE_ORDER.map((machine) => `<option value="${machine}" ${this.filter === machine ? "selected" : ""}>${text(MACHINE_LABELS[machine])}</option>`).join(""), this.error ? L("<p class=\"comm-error\" role=\"alert\">{0} <button type=\"button\" data-comm-action=\"refresh\" data-key=\"comm-refresh\">Kiểm tra lại</button></p>", text(this.error)) : "", history.length ? `<div class="comm-feed">${visibleHistory.map((item) => item.html).join("")}</div>` : L("<div class=\"comm-empty\"><strong>Chưa có trao đổi được ghi nhận</strong><p>Khi agent gửi tin qua kênh được hỗ trợ hoặc sếp giao việc tại đây, người gửi, máy nhận và biên nhận sẽ xuất hiện.</p></div>"), embedded && history.length > 4 ? `<button type="button" class="comm-expand" data-comm-action="expand" data-key="comm-expand" aria-expanded="${this.expanded}">${this.expanded ? L("Thu gọn") : L("Xem thêm {0} lượt", history.length - 4)}</button>` : "");
+    const heading = embedded ? L("<header class=\"comm-embedded-heading\"><div><h3>Giao tiếp</h3><span class=\"comm-caption\">{0}</span></div><button type=\"button\" class=\"ops-primary\" data-comm-action=\"compose\" data-key=\"comm-compose-toggle\" aria-controls=\"comm-compose\" aria-expanded=\"{1}\">{2}</button></header>", this.replay ? L("Lịch sử trao đổi") : this.connected ? L("Trao đổi giữa các máy") : L("Chờ kết nối hub"), this.composerOpen, this.composerOpen ? L("Đóng") : L("Giao việc")) : L("<div class=\"comm-intro\"><div><h2>Giao tiếp giữa các máy</h2><p>Theo dõi trao đổi thật giữa agent và giao việc vào đúng phiên.</p></div><span class=\"comm-live\" data-connected=\"{0}\">{1}</span></div><div class=\"comm-machines\">{2}</div>", this.connected, this.connected ? L("Đang nhận dữ liệu") : L("Chờ kết nối"), communicationMachines(this.snapshot, this.connected));
+    return `<div class="comm-board${embedded ? " comm-embedded" : ""}">${heading}${this.replay ? L("<p class=\"comm-replay-notice\" role=\"status\">Đang xem lại lịch sử; trở về Trực tiếp để giao việc.</p>") : ""}<div class="comm-layout">${!embedded || this.composerOpen ? compose : ""}${historyMarkup}</div></div>`;
   }
 }

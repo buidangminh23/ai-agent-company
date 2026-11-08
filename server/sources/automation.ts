@@ -1,3 +1,4 @@
+import { L, locale } from "../../shared/i18n.ts";
 import { open, readFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -68,11 +69,11 @@ function result(lastRun: number | null, status: JobStatus, summary: string, deta
 }
 
 function noEntries(): JobResult {
-  return result(null, "warn", "Có file log nhưng chưa có dòng nào đọc được.");
+  return result(null, "warn", L("Có file log nhưng chưa có dòng nào đọc được."));
 }
 
 function plural(count: number, noun: string): string {
-  return `${count.toLocaleString("vi-VN")} ${noun}`;
+  return `${count.toLocaleString(locale())} ${noun}`;
 }
 
 function repoField(line: LogLine, index: number): string {
@@ -99,10 +100,10 @@ export function parseRepoSync(text: string, now: number): JobResult {
   const warnings = problems("warn");
   const commits = [...pulled.values()].reduce((sum, value) => sum + value, 0);
   const scan = [...latest].reverse().find((line) => /quet \d+ repo/.test(line.text));
-  const scanText = scan ? ` · lượt gần nhất: ${repoField(scan, 3).replace("quet", "quét").replace("repo co thay doi", "repo có thay đổi")}` : "";
-  const details = [...[...pulled].map(([repo, count]) => `Kéo về ${repo}: +${count} commit`), ...errors.map((line) => `Lỗi: ${line}`), ...warnings.map((line) => `Cảnh báo: ${line}`)];
+  const scanText = scan ? L(" · lượt gần nhất: {0}", repoField(scan, 3).replace("quet", L("quét")).replace("repo co thay doi", L("repo có thay đổi"))) : "";
+  const details = [...[...pulled].map(([repo, count]) => L("Kéo về {0}: +{1} commit", repo, count)), ...errors.map((line) => L("Lỗi: {0}", line)), ...warnings.map((line) => L("Cảnh báo: {0}", line))];
   const status: JobStatus = errors.length ? "error" : warnings.length ? "warn" : "ok";
-  return result(lastRun, status, `${commits ? `Hôm nay kéo về ${plural(commits, "commit")} ở ${plural(pulled.size, "repo")}` : "Hôm nay chưa có commit mới"}${scanText}`, unique(details), { pulled: pulls });
+  return result(lastRun, status, `${commits ? L("Hôm nay kéo về {0} ở {1}", plural(commits, "commit"), plural(pulled.size, "repo")) : L("Hôm nay chưa có commit mới")}${scanText}`, unique(details), { pulled: pulls });
 }
 
 export function parseGithubSync(text: string, now: number): JobResult {
@@ -118,8 +119,8 @@ export function parseGithubSync(text: string, now: number): JobResult {
   const failed = Number(done?.text.match(/failed: (\d+)/)?.[1] ?? 0);
   const failures = unique(today.filter((line) => /^(FAIL|ERROR)/.test(body(line.text))).map((line) => body(line.text)));
   const total = [...synced.values()].reduce((sum, value) => sum + value, 0);
-  const details = [...[...synced].map(([repo, count]) => `Cập nhật ${repo}: ${plural(count, "lần")}`), ...failures.map((line) => `Lỗi: ${line}`)];
-  return result(lines.at(-1)!.at, failed ? "error" : "ok", total ? `Hôm nay cập nhật ${plural(total, "lần")} trên ${plural(synced.size, "repo")}` : "Hôm nay chưa có repo nào cần cập nhật", unique(details), { pulled: total });
+  const details = [...[...synced].map(([repo, count]) => L("Cập nhật {0}: {1}", repo, plural(count, L("lần")))), ...failures.map((line) => L("Lỗi: {0}", line))];
+  return result(lines.at(-1)!.at, failed ? "error" : "ok", total ? L("Hôm nay cập nhật {0} trên {1}", plural(total, L("lần")), plural(synced.size, "repo")) : L("Hôm nay chưa có repo nào cần cập nhật"), unique(details), { pulled: total });
 }
 
 export function parseHomeSync(text: string, now: number): JobResult {
@@ -140,23 +141,23 @@ export function parseHomeSync(text: string, now: number): JobResult {
   const unreachable = /home PC unreachable/.test(last.text);
   const errors = unique(today.filter((line) => line.text.includes("[error]")).map((line) => body(line.text)));
   const status: JobStatus = errors.length ? "error" : conflicts || unreachable ? "warn" : "ok";
-  const summary = unreachable ? "Lượt gần nhất không nối được máy nhà nên bỏ qua" : `Hôm nay chép ${plural(copied, "file")} về Mac, đẩy ${plural(pushed, "file")} về máy nhà`;
-  return result(last.at, status, summary, [...(conflicts ? [`${plural(conflicts, "xung đột")} được giữ cả hai bản`] : []), ...errors]);
+  const summary = unreachable ? L("Lượt gần nhất không nối được máy nhà nên bỏ qua") : L("Hôm nay chép {0} về Mac, đẩy {1} về máy nhà", plural(copied, "file"), plural(pushed, "file"));
+  return result(last.at, status, summary, [...(conflicts ? [L("{0} được giữ cả hai bản", plural(conflicts, L("xung đột")))] : []), ...errors]);
 }
 
 export function parseDailyUpdateState(text: string, now: number): JobResult {
   let state: { status?: string; steps?: Record<string, { status?: string; time?: string; message?: string }> };
-  try { state = JSON.parse(text.replace(/^\uFEFF/, "")); } catch { return result(null, "warn", "Không đọc được file trạng thái DailyUpdate."); }
+  try { state = JSON.parse(text.replace(/^\uFEFF/, "")); } catch { return result(null, "warn", L("Không đọc được file trạng thái DailyUpdate.")); }
   const steps = Object.entries(state.steps ?? {}).map(([id, step]) => ({ id, status: step.status ?? "", at: Date.parse(step.time ?? ""), message: step.message ?? "" }));
-  if (!steps.length) return result(null, "warn", "DailyUpdate chưa ghi bước nào.");
+  if (!steps.length) return result(null, "warn", L("DailyUpdate chưa ghi bước nào."));
   const lastRun = Math.max(...steps.map((step) => step.at).filter(Number.isFinite));
   const failed = steps.filter((step) => /fail|error/i.test(step.status));
   const pending = steps.filter((step) => /pending/i.test(step.status));
   const packages = steps.filter((step) => step.id.startsWith("winget:") && step.id !== "winget:scan" && step.status === "Success" && step.at >= dayStart(now)).map((step) => step.id.slice("winget:".length));
   const ok = steps.filter((step) => step.status === "Success").length;
   const status: JobStatus = failed.length ? "error" : pending.length ? "warn" : "ok";
-  const details = [...(packages.length ? [`Gói winget đã chạy cập nhật: ${packages.join(", ")}`] : []), ...failed.map((step) => `Lỗi ${step.id}: ${step.message}`), ...pending.map((step) => `Đang chờ ${step.id}: ${step.message}`)];
-  return result(Number.isFinite(lastRun) ? lastRun : null, status, `${ok}/${steps.length} bước thành công${failed.length ? `, ${failed.length} lỗi` : ""}${pending.length ? `, ${pending.length} chờ máy rảnh hoặc khởi động lại` : ""}`, unique(details), { updated: packages.length });
+  const details = [...(packages.length ? [L("Gói winget đã chạy cập nhật: {0}", packages.join(", "))] : []), ...failed.map((step) => L("Lỗi {0}: {1}", step.id, step.message)), ...pending.map((step) => L("Đang chờ {0}: {1}", step.id, step.message))];
+  return result(Number.isFinite(lastRun) ? lastRun : null, status, L("{0}/{1} bước thành công{2}{3}", ok, steps.length, failed.length ? L(", {0} lỗi", failed.length) : "", pending.length ? L(", {0} chờ máy rảnh hoặc khởi động lại", pending.length) : ""), unique(details), { updated: packages.length });
 }
 
 export function parseMacUpdate(text: string, now: number): JobResult {
@@ -171,8 +172,8 @@ export function parseMacUpdate(text: string, now: number): JobResult {
   const done = run.filter((line) => body(line.text).startsWith("SUCCESS")).map((line) => body(line.text).slice("SUCCESS ".length));
   const failed = run.filter((line) => /^(FAIL|ERROR)/.test(body(line.text))).map((line) => body(line.text));
   const status: JobStatus = !summary ? "warn" : failures ? "error" : pending ? "warn" : "ok";
-  const outcome = summary ? `${plural(done.length, "bước")} thành công${failures ? `, ${failures} lỗi` : ""}${pending ? `, ${pending} đang chờ` : ""}` : "Lượt gần nhất chưa chạy xong";
-  return result(begin, status, outcome, unique([...failed, ...(done.length ? [`Đã chạy: ${done.join(", ")}`] : [])]), { updated: begin >= dayStart(now) ? done.length : 0 });
+  const outcome = summary ? L("{0} thành công{1}{2}", plural(done.length, L("bước")), failures ? L(", {0} lỗi", failures) : "", pending ? L(", {0} đang chờ", pending) : "") : L("Lượt gần nhất chưa chạy xong");
+  return result(begin, status, outcome, unique([...failed, ...(done.length ? [L("Đã chạy: {0}", done.join(", "))] : [])]), { updated: begin >= dayStart(now) ? done.length : 0 });
 }
 
 function megabytes(value: string, unit: string): number {
@@ -182,7 +183,7 @@ function megabytes(value: string, unit: string): number {
 }
 
 export function size(mb: number): string {
-  return mb >= KB ? `${(mb / KB).toLocaleString("vi-VN", { maximumFractionDigits: 1 })} GB` : `${Math.round(mb).toLocaleString("vi-VN")} MB`;
+  return mb >= KB ? `${(mb / KB).toLocaleString(locale(), { maximumFractionDigits: 1 })} GB` : `${Math.round(mb).toLocaleString(locale())} MB`;
 }
 
 export function parseCacheCleanup(text: string, now: number): JobResult {
@@ -190,7 +191,7 @@ export function parseCacheCleanup(text: string, now: number): JobResult {
   if (!lines.length) return noEntries();
   const summaries = lines.filter((line) => line.text.includes("SUMMARY reclaimed="));
   const last = summaries.at(-1);
-  if (!last) return result(lines.at(-1)!.at, "warn", "Lượt gần nhất chưa chạy xong");
+  if (!last) return result(lines.at(-1)!.at, "warn", L("Lượt gần nhất chưa chạy xong"));
   const reclaimed = last.text.match(/reclaimed=([\d.,]+)\s*([KMG]B)/i);
   const free = last.text.match(/free=([\d.,]+)\s*([KMG]B)/i);
   const failures = Number(last.text.match(/failures=(\d+)/)?.[1] ?? 0);
@@ -198,8 +199,8 @@ export function parseCacheCleanup(text: string, now: number): JobResult {
     const match = line.text.match(/reclaimed=([\d.,]+)\s*([KMG]B)/i);
     return sum + (match ? megabytes(match[1], match[2]) : 0);
   }, 0);
-  const summary = `Lượt gần nhất dọn ${reclaimed ? size(megabytes(reclaimed[1], reclaimed[2])) : "?"}${free ? `, ổ còn trống ${size(megabytes(free[1], free[2]))}` : ""}`;
-  return result(last.at, failures ? "warn" : "ok", summary, failures ? [`${plural(failures, "mục")} dọn không được`] : [], { reclaimedMb: Math.round(today) });
+  const summary = L("Lượt gần nhất dọn {0}{1}", reclaimed ? size(megabytes(reclaimed[1], reclaimed[2])) : "?", free ? L(", ổ còn trống {0}", size(megabytes(free[1], free[2]))) : "");
+  return result(last.at, failures ? "warn" : "ok", summary, failures ? [L("{0} dọn không được", plural(failures, L("mục")))] : [], { reclaimedMb: Math.round(today) });
 }
 
 export function parseDrivers(text: string, now: number): JobResult {
@@ -213,7 +214,7 @@ export function parseDrivers(text: string, now: number): JobResult {
   const run = lines.filter((line) => line.at >= done.at - LAST_RUN_WINDOW_MS && line.at <= done.at);
   const installed = run.filter((line) => /installed .*latest|Installed|install /.test(line.text) && !/ skip /.test(line.text)).map((line) => body(line.text).replace("[drivers] ", ""));
   const status: JobStatus = failures ? "error" : pending ? "warn" : "ok";
-  return result(done.at, status, `${failures ? `${failures} lỗi` : "Không lỗi"}${pending ? ", có driver chờ khởi động lại" : ""}`, unique(installed));
+  return result(done.at, status, `${failures ? L("{0} lỗi", failures) : L("Không lỗi")}${pending ? L(", có driver chờ khởi động lại") : ""}`, unique(installed));
 }
 
 export function parseSkillSync(text: string, now: number): JobResult {
@@ -225,18 +226,18 @@ export function parseSkillSync(text: string, now: number): JobResult {
   const errors = today.filter((line) => kind(line) === "ERROR").map((line) => body(line.text).replace(/^ERROR /, "").split(":")[0]);
   const latestErrors = lines.filter((line) => line.at >= lines.at(-1)!.at - LAST_RUN_WINDOW_MS && kind(line) === "ERROR");
   const status: JobStatus = latestErrors.length ? "warn" : "ok";
-  const summary = `Hôm nay ${plural(changed.length, "skill/plugin")} được cập nhật${errors.length ? `, ${plural(new Set(errors).size, "nguồn")} lỗi` : ""}`;
-  return result(lines.at(-1)!.at, status, summary, unique([...changed, ...unique(errors).map((name) => `Nguồn lỗi: ${name}`)]), { updated: changed.length });
+  const summary = L("Hôm nay {0} được cập nhật{1}", plural(changed.length, "skill/plugin"), errors.length ? L(", {0} lỗi", plural(new Set(errors).size, L("nguồn"))) : "");
+  return result(lines.at(-1)!.at, status, summary, unique([...changed, ...unique(errors).map((name) => L("Nguồn lỗi: {0}", name))]), { updated: changed.length });
 }
 
 export function parseChangeLog(noun: string) {
   return (text: string, now: number): JobResult => {
     const lines = logLines(text);
-    if (!lines.length) return result(null, "ok", `Chưa ghi nhận ${noun} nào.`);
+    if (!lines.length) return result(null, "ok", L("Chưa ghi nhận {0} nào.", noun));
     const today = lines.filter((line) => line.at >= dayStart(now)).map((line) => body(line.text));
     const failed = today.filter((line) => /fail|error|lỗi/i.test(line));
     const applied = new Set(today.filter((line) => /INSTALLED|is applied/.test(line)).map((line) => line.replace(/ in (claude|codex)$/, "")));
-    const summary = `Hôm nay ${applied.size ? `có ${plural(applied.size, noun)}` : `chưa có ${noun} nào`}${failed.length ? `, ${failed.length} dòng lỗi` : ""}`;
+    const summary = L("Hôm nay {0}{1}", applied.size ? L("có {0}", plural(applied.size, noun)) : L("chưa có {0} nào", noun), failed.length ? L(", {0} dòng lỗi", failed.length) : "");
     return result(lines.at(-1)!.at, failed.length ? "warn" : "ok", summary, unique(today.slice(-MAX_DETAILS)), { updated: applied.size });
   };
 }
@@ -280,7 +281,7 @@ export function parseJobConfig(raw: unknown, platform = process.platform): JobSp
   return list.flatMap((entry: JobConfig) => {
     if (!entry || typeof entry.id !== "string" || typeof entry.name !== "string" || typeof entry.file !== "string") return [];
     const format = typeof entry.format === "string" ? entry.format : "change-log";
-    const parse = format === "change-log" ? parseChangeLog(typeof entry.noun === "string" ? entry.noun : "thay đổi") : PARSERS[format];
+    const parse = format === "change-log" ? parseChangeLog(typeof entry.noun === "string" ? entry.noun : L("thay đổi")) : PARSERS[format];
     if (!parse) return [];
     const group = GROUPS.includes(entry.group as JobGroup) ? entry.group as JobGroup : "update";
     const staleHours = Number(entry.staleHours);
@@ -290,7 +291,7 @@ export function parseJobConfig(raw: unknown, platform = process.platform): JobSp
       name: entry.name,
       group,
       schedule: typeof entry.schedule === "string" ? entry.schedule : "",
-      lastRunLabel: typeof entry.lastRunLabel === "string" ? entry.lastRunLabel : "Chạy gần nhất",
+      lastRunLabel: typeof entry.lastRunLabel === "string" ? entry.lastRunLabel : L("Chạy gần nhất"),
       staleMs: Number.isFinite(staleHours) && staleHours > 0 ? staleHours * HOUR : null,
       file: expandHome(entry.file),
       bytes: (Number.isFinite(maxKb) && maxKb > 0 ? Math.min(maxKb, 4096) : 256) * KB,
@@ -324,7 +325,7 @@ async function tail(file: string, bytes: number): Promise<string | null> {
 
 export function toJob(spec: JobSpec, text: string | null, now: number): AutomationJob {
   const base = { id: spec.id, name: spec.name, group: spec.group, schedule: spec.schedule, lastRunLabel: spec.lastRunLabel };
-  if (text === null) return { ...base, status: "missing", lastRun: null, summary: "Máy này không có tác vụ này hoặc chưa chạy lần nào.", details: [], figures: {} };
+  if (text === null) return { ...base, status: "missing", lastRun: null, summary: L("Máy này không có tác vụ này hoặc chưa chạy lần nào."), details: [], figures: {} };
   const parsed = spec.parse(text, now);
   const stale = spec.staleMs !== null && parsed.lastRun !== null && now - parsed.lastRun > spec.staleMs;
   const status: JobStatus = stale && parsed.status !== "error" ? "stale" : parsed.status;

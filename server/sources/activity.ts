@@ -1,3 +1,4 @@
+import { L } from "../../shared/i18n.ts";
 import path from "node:path";
 import type { AgentInfo } from "../../shared/types.ts";
 
@@ -102,8 +103,8 @@ export function collectActivity(records: any[], cwd: string, app: "codex" | "cla
     const terminal = app === "codex"
       ? record.type === "event_msg" && ["task_complete", "task_aborted", "turn_aborted"].includes(p.type) ? p.type : record.type === "response_item" && p.role === "assistant" && ["final", "final_answer"].includes(p.channel ?? p.phase) ? "end_turn" : null
       : record.type === "assistant" && p.stop_reason === "end_turn" ? "end_turn" : null;
-    if (terminal) outcome = { status: terminal.includes("aborted") ? "aborted" : "completed", at, summary: terminal.includes("aborted") ? "Ứng dụng ghi nhận lượt bị dừng" : "Ứng dụng ghi nhận kết thúc lượt; chưa xác minh kết quả công việc", verified: false };
+    if (terminal) outcome = { status: terminal.includes("aborted") ? "aborted" : "completed", at, summary: terminal.includes("aborted") ? L("Ứng dụng ghi nhận lượt bị dừng") : L("Ứng dụng ghi nhận kết thúc lượt; chưa xác minh kết quả công việc"), verified: false };
   }
-  const repeatedError = failures.size >= 3 ? { count: failures.size, at: [...failures.values()].sort().at(-1)!, summary: `${failures.size} lần gọi công cụ khác nhau báo lỗi trong lượt hiện tại` } : undefined;
+  const repeatedError = failures.size >= 3 ? { count: failures.size, at: [...failures.values()].sort().at(-1)!, summary: L("{0} lần gọi công cụ khác nhau báo lỗi trong lượt hiện tại", failures.size) } : undefined;
   return { files: [...writes].slice(-MAX_FILES).map(([file, at]) => ({ path: file, at })), lastActivityAt, outcome, repeatedError };
 }

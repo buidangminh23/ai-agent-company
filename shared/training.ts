@@ -1,3 +1,4 @@
+import { L } from "./i18n.ts";
 import type { AgentInfo } from "./types.ts";
 
 const SKILL_PATH = /(?:^|[\\/])(?:[\w.-]+-skills?|My Skills)(?:[\\/]|$)|[\\/]\.(?:claude|codex|agents|gemini[\\/]config)[\\/]skills(?:[\\/]|$)|[\\/]Claude[\\/]skills(?:[\\/]|$)|(?:^|[\\/])SKILL\.md$/i;
@@ -13,13 +14,13 @@ export function trainingFocus(agent: Pick<AgentInfo, "cwd" | "files">): string |
 }
 
 export const TRAINING_STAGES = [
-  { stage: "lecture", duration: 12, label: "Giảng bài" },
-  { stage: "demonstrate", duration: 10, label: "Hướng dẫn trên bảng" },
-  { stage: "notes", duration: 11, label: "Ghi chép" },
-  { stage: "practice", duration: 14, label: "Thực hành" },
-  { stage: "question", duration: 6, label: "Học viên đặt câu hỏi" },
-  { stage: "answer", duration: 8, label: "Giải đáp" },
-  { stage: "recap", duration: 7, label: "Ôn lại bài" },
+  { stage: "lecture", duration: 12, label: L("Giảng bài") },
+  { stage: "demonstrate", duration: 10, label: L("Hướng dẫn trên bảng") },
+  { stage: "notes", duration: 11, label: L("Ghi chép") },
+  { stage: "practice", duration: 14, label: L("Thực hành") },
+  { stage: "question", duration: 6, label: L("Học viên đặt câu hỏi") },
+  { stage: "answer", duration: 8, label: L("Giải đáp") },
+  { stage: "recap", duration: 7, label: L("Ôn lại bài") },
 ] as const;
 
 export const TRAINING_CYCLE_SECONDS = TRAINING_STAGES.reduce((sum, step) => sum + step.duration, 0);

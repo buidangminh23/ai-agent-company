@@ -1,3 +1,4 @@
+import { L } from "../../shared/i18n.ts";
 import { readdir, readFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import os from "node:os";
@@ -19,21 +20,21 @@ const WRAP_UP_TOOL = "mcp__ccd_turn__wrap_up";
 const SECRET_PATTERN = /\b(?:sk-[\w-]{16,}|gh[pousr]_[\w]{16,}|Bearer\s+[\w.\/-]+)/gi;
 const APP_ACTION_LABELS: Record<string, string> = {
   commit: "Commit",
-  create_pr: "Tạo PR",
-  merge: "Gộp PR",
-  fix_ci: "Sửa CI",
-  resolve_conflicts: "Gỡ xung đột",
-  address_comments: "Xử lý góp ý",
-  verify: "Kiểm tra",
-  archive: "Lưu trữ phiên",
-  new_session: "Mở phiên mới",
+  create_pr: L("Tạo PR"),
+  merge: L("Gộp PR"),
+  fix_ci: L("Sửa CI"),
+  resolve_conflicts: L("Gỡ xung đột"),
+  address_comments: L("Xử lý góp ý"),
+  verify: L("Kiểm tra"),
+  archive: L("Lưu trữ phiên"),
+  new_session: L("Mở phiên mới"),
 };
 
 function cleanRequest(text: string): string {
   const request = text.includes("## My request:") ? text.split("## My request:").slice(1).join("## My request:") : text;
   const cleaned = request.replace(/<image\b[^>]*>[\s\S]*?<\/image>/gi, "").trim();
   if (!cleaned || cleaned.startsWith("<") || /^# AGENTS\.md instructions\b/.test(cleaned)) return "";
-  return cleaned.replace(SECRET_PATTERN, "[đã ẩn]");
+  return cleaned.replace(SECRET_PATTERN, L("[đã ẩn]"));
 }
 
 function requestText(text: string): string {
@@ -57,7 +58,7 @@ function readMetadata(file: string, records: any[], prompt: string): Pick<AgentI
       const progress = reportText(textOf(rec.message?.content));
       if (progress) metadata.progress = progress;
       const recap = wrapUpOf(rec.message?.content)?.input?.recap;
-      if (typeof recap === "string" && recap.trim()) metadata.recap = clipLines(recap.replace(SECRET_PATTERN, "[đã ẩn]"), 600);
+      if (typeof recap === "string" && recap.trim()) metadata.recap = clipLines(recap.replace(SECRET_PATTERN, L("[đã ẩn]")), 600);
     }
     if (rec.type === "user" && rec.message?.role === "user" && !rec.isMeta) {
       const task = requestText(textOf(rec.message.content));
@@ -168,7 +169,7 @@ function readState(records: any[], busy: boolean | null, statusAt = 0): TailStat
   if (ask) {
     const q = ask.input?.questions?.[0];
     const pending: PendingQuestion = {
-      question: clip(q?.question ?? (ask.name === "ExitPlanMode" ? "Duyệt kế hoạch?" : "Cần sếp trả lời"), 220),
+      question: clip(q?.question ?? (ask.name === "ExitPlanMode" ? L("Duyệt kế hoạch?") : L("Cần sếp trả lời")), 220),
       options: (q?.options ?? []).map((o: any) => clip(String(o.label ?? o), 60)),
       askedAt,
       kind: "question",
@@ -178,8 +179,8 @@ function readState(records: any[], busy: boolean | null, statusAt = 0): TailStat
   if (busy === false && !statusAt) return { state: "idle", detail: clip(textOf(last.message?.content), 90), files, pending: decision, at };
   const tool = parts.filter((p) => p.type === "tool_use").pop();
   if (last.type === "assistant" && tool) return { state: "working", detail: toolSummary(tool), files, pending: null, at };
-  if (parts.some((p) => p.type === "thinking")) return { state: "thinking", detail: "Đang suy nghĩ", files, pending: null, at };
-  return { state: busy === null ? "idle" : "thinking", detail: busy === null ? "" : "Đang suy nghĩ", files, pending: null, at };
+  if (parts.some((p) => p.type === "thinking")) return { state: "thinking", detail: L("Đang suy nghĩ"), files, pending: null, at };
+  return { state: busy === null ? "idle" : "thinking", detail: busy === null ? "" : L("Đang suy nghĩ"), files, pending: null, at };
 }
 
 async function listFiles(dir: string, suffix: string, out: string[] = []): Promise<string[]> {
@@ -258,7 +259,7 @@ export async function readClaude(machine: MachineId): Promise<AgentInfo[]> {
       cwd: canonicalPath(s.cwd, s.cwd ?? ""),
       sessionId: s.sessionId,
       ...collectActivity(records, s.cwd ?? "", "claude"),
-      title: clip(s.name || prompt || "Phiên Claude", 80),
+      title: clip(s.name || prompt || L("Phiên Claude"), 80),
       ...(transcript ? readMetadata(transcript, metadataCache.has(transcript) ? records : [...parseLines(await readHead(transcript, 256 * 1024)), ...records], prompt) : {}),
       project: projectName(s.cwd ?? ""),
       role: classifyRole(`${s.name ?? ""} ${prompt}`, st.files),

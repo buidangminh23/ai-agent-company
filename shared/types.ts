@@ -1,9 +1,10 @@
+import { L } from "./i18n.ts";
 export type AgentApp = "claude" | "codex" | "antigravity";
 export type AgentState = "thinking" | "working" | "waiting" | "idle";
 export type MachineId = "WORKSTATION" | "SERVER" | "LAPTOP";
 export const MACHINE_ORDER: readonly MachineId[] = ["WORKSTATION", "LAPTOP", "SERVER"];
 
-export const MACHINE_LABELS: Record<MachineId, string> = { WORKSTATION: "Máy chính", LAPTOP: "Laptop", SERVER: "Máy chủ" };
+export const MACHINE_LABELS: Record<MachineId, string> = { WORKSTATION: L("Máy chính"), LAPTOP: "Laptop", SERVER: L("Máy chủ") };
 
 export function byMachineOrder(a: MachineId, b: MachineId): number {
   return MACHINE_ORDER.indexOf(a) - MACHINE_ORDER.indexOf(b);

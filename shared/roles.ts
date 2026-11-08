@@ -1,3 +1,4 @@
+import { L } from "./i18n.ts";
 import type { RoleId } from "./types.ts";
 
 export interface RoleDef {
@@ -13,9 +14,9 @@ export const ROLES: RoleDef[] = [
   { id: "ba", label: "BA", row: "office", keywords: ["nghiệp vụ", "usecase", "use case", "user story", "srs", "brd", "urd", "yêu cầu", "requirement", "bpmn", "đặc tả"], files: [] },
   { id: "marketing", label: "Marketing", row: "office", keywords: ["marketing", "quảng cáo", "ads", "campaign", "seo", "chiến dịch", "landing", "facebook ads"], files: [] },
   { id: "content", label: "Content", row: "office", keywords: ["content", "bài viết", "viết bài", "caption", "kịch bản", "script video", "thuyết minh", "blog", "copy", "video", "capcut"], files: [".mdx"] },
-  { id: "cskh", label: "CSKH", row: "office", keywords: ["khách hàng", "cskh", "support", "hỗ trợ", "phản hồi khách", "ticket", "issue", "reply"], files: [] },
+  { id: "cskh", label: L("CSKH"), row: "office", keywords: ["khách hàng", "cskh", "support", "hỗ trợ", "phản hồi khách", "ticket", "issue", "reply"], files: [] },
   { id: "hr", label: "HR", row: "office", keywords: ["nhân sự", "chấm công", "tuyển", "lương", "hr", "nhân viên"], files: [] },
-  { id: "admin", label: "Hành chính", row: "office", keywords: ["hành chính", "văn bản", "công văn", "hồ sơ", "biểu mẫu", "excel", "word", "pdf", "hoá đơn", "hóa đơn", "đổi tên", "bài tập", "assignment"], files: [".docx", ".xlsx", ".xlsm", ".pdf", ".pptx"] },
+  { id: "admin", label: L("Hành chính"), row: "office", keywords: ["hành chính", "văn bản", "công văn", "hồ sơ", "biểu mẫu", "excel", "word", "pdf", "hoá đơn", "hóa đơn", "đổi tên", "bài tập", "assignment"], files: [".docx", ".xlsx", ".xlsm", ".pdf", ".pptx"] },
   { id: "sales", label: "Sales", row: "office", keywords: ["bán hàng", "báo giá", "sales", "đơn hàng", "thanh toán", "checkout", "gói", "giá"], files: [] },
   { id: "backend", label: "Backend", row: "tech", keywords: ["backend", "api", "endpoint", "server", "database", "prisma", "sql", "fastapi", "migration", "route", "supabase", "bot"], files: [".py", ".sql", ".prisma", ".go", ".rs"] },
   { id: "frontend", label: "Frontend", row: "tech", keywords: ["frontend", "react", "component", "trang", "page", "astro", "next", "vue", "tailwind"], files: [".tsx", ".jsx", ".vue", ".astro", ".svelte"] },

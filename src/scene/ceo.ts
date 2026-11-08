@@ -1,3 +1,4 @@
+import { L } from "../../shared/i18n.ts";
 import * as THREE from "three";
 import { CSS2DObject } from "three/examples/jsm/renderers/CSS2DRenderer.js";
 import { reducedMotion } from "../motion.ts";
@@ -405,10 +406,10 @@ function paperWeights(sample: MeetingSample, carried: boolean): { held: number; 
 }
 
 function bubbleText(sample: MeetingSample, agenda: MeetingAgenda): string | null {
-  if (sample.state === "meetOpen") return agenda.kind === "project" ? `Khởi động dự án ${clip(agenda.project)}. Bắt đầu họp!` : `Họp nhanh về ${clip(agenda.project)}.`;
-  if (sample.state === "meetOrder") return `Giao việc: ${clip(agenda.title)}`;
-  if (sample.state === "meetListen" && sample.time < 3.5) return "Mời trình bày kế hoạch.";
-  if (sample.state === "meetApprove" && sample.time > 0.6) return "Duyệt! Triển khai ngay.";
+  if (sample.state === "meetOpen") return agenda.kind === "project" ? L("Khởi động dự án {0}. Bắt đầu họp!", clip(agenda.project)) : L("Họp nhanh về {0}.", clip(agenda.project));
+  if (sample.state === "meetOrder") return L("Giao việc: {0}", clip(agenda.title));
+  if (sample.state === "meetListen" && sample.time < 3.5) return L("Mời trình bày kế hoạch.");
+  if (sample.state === "meetApprove" && sample.time > 0.6) return L("Duyệt! Triển khai ngay.");
   return null;
 }
 
@@ -583,7 +584,7 @@ export class CeoAnimator {
   private poseCycle(elapsed: number, quiet: boolean): CeoTimelineSample {
     const sample = sampleCeoTimeline(quiet ? 30 : elapsed - this.cycleOffset);
     this.state = sample.state;
-    this.stateLabel = quiet ? "Làm việc tại bàn" : sample.label;
+    this.stateLabel = quiet ? L("Làm việc tại bàn") : sample.label;
     this.phase = sample.progress;
     samplePose(sample.state, quiet ? 0 : sample.time, sample.duration, this.pose);
     const previous = CEO_TIMELINE[(sample.index + CEO_TIMELINE.length - 1) % CEO_TIMELINE.length];

@@ -1,3 +1,4 @@
+import { L } from "../shared/i18n.ts";
 import type { AgentApp, AgentInfo, MachineHealth, MachineId, SiteStatus, Snapshot } from "../shared/types.ts";
 import { ROLES } from "../shared/roles.ts";
 import type { SeatTarget } from "./agents.ts";
@@ -36,10 +37,10 @@ function gb(bytes: number): string {
 }
 
 function healthText(m: MachineHealth): string {
-  if (!m.online) return m.source === "none" ? "Chưa cài collector" : "Mất kết nối máy";
+  if (!m.online) return m.source === "none" ? L("Chưa cài collector") : L("Mất kết nối máy");
   const parts = [`CPU ${m.cpu ?? "—"}%`];
   if (m.memTotal) parts.push(`RAM ${gb(m.memUsed ?? 0)}/${gb(m.memTotal)} GB`);
-  if (m.diskTotal) parts.push(`Ổ ${gb(m.diskUsed ?? 0)}/${gb(m.diskTotal)} GB`);
+  if (m.diskTotal) parts.push(L("Ổ {0}/{1} GB", gb(m.diskUsed ?? 0), gb(m.diskTotal)));
   return parts.join(" · ");
 }
 
@@ -92,7 +93,7 @@ function addStaff(snap: Snapshot, crew: Crew, nowMs: number, realSeats: Set<stri
       const seat = roleSeat(room.machine, role.id);
       const id = `${STAFF_PREFIX}${room.machine}:${role.id}`;
       const index = ROLES.indexOf(role);
-      const info = crewAgent(id, CREW_APPS[index % CREW_APPS.length], room.machine, room.machine, "Sẵn sàng nhận việc", "", false, snap.generatedAt);
+      const info = crewAgent(id, CREW_APPS[index % CREW_APPS.length], room.machine, room.machine, L("Sẵn sàng nhận việc"), "", false, snap.generatedAt);
       crew.agents.push({ ...info, role: role.id });
       const spot = away.get(id);
       crew.pins.set(id, spot !== undefined ? huddles[spot] : { key: seat.key, x: seat.x, z: seat.z, facing: seat.facing, pose: "sit", approach: seat.lane, task: "type" });
@@ -108,7 +109,7 @@ function addMachineOps(snap: Snapshot, crew: Crew): void {
     const nook = serverNook(zone);
     const id = `${OPS_PREFIX}${room.machine}`;
     const rackX = (nook.x0 + nook.x1) / 2 + NOOK_RACK_X;
-    crew.agents.push(crewAgent(id, CREW_APPS[i % CREW_APPS.length], room.machine, room.machine, "Bảo trì và vận hành máy chủ", healthText(health), health.online, health.checkedAt));
+    crew.agents.push(crewAgent(id, CREW_APPS[i % CREW_APPS.length], room.machine, room.machine, L("Bảo trì và vận hành máy chủ"), healthText(health), health.online, health.checkedAt));
     crew.pins.set(id, { key: `nook:${room.machine}`, x: rackX, z: nook.z0 + NOOK_RACK_Z + RACK_FRONT + RACK_REACH, facing: Math.PI, pose: "stand", approach: null, task: "rack" });
   });
 }
@@ -120,7 +121,7 @@ function addSiteOps(snap: Snapshot, crew: Crew): void {
     const [row, side, index] = SITE_RACKS[i];
     const slot = slots.find((s) => s.row === row && s.side === side && s.index === index)!;
     const id = `${OPS_PREFIX}site:${site.label}`;
-    crew.agents.push(crewAgent(id, CREW_APPS[(i + 1) % CREW_APPS.length], "LAPTOP", site.label, "Giám sát web", siteText(site), site.ok, site.checkedAt));
+    crew.agents.push(crewAgent(id, CREW_APPS[(i + 1) % CREW_APPS.length], "LAPTOP", site.label, L("Giám sát web"), siteText(site), site.ok, site.checkedAt));
     crew.pins.set(id, { key: `server:${i}`, x: slot.x, z: slot.z + RACK_FRONT + RACK_REACH, facing: Math.PI, pose: "stand", approach: null, task: "rack" });
   });
 }

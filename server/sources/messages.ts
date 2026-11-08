@@ -1,3 +1,4 @@
+import { L } from "../../shared/i18n.ts";
 import { MACHINE_ORDER, type AgentApp, type MachineId, type MessageStatus, type MessageTarget, type MessageVia, type SentMessage } from "../../shared/types.ts";
 
 export const WINDOW_MS = 10 * 60_000;
@@ -12,7 +13,7 @@ const DELIVERY_FAILED = new Set(["failed", "send_failed", "refused", "rejected",
 const AGENT_BRIDGE_CALL = '{"Arguments":';
 const AGENT_BRIDGE_SEND = "send_to_agent_task";
 const OUTBOUND_APPS: Record<string, AgentApp> = { claude: "claude", codex: "codex" };
-const OUTBOUND_FALLBACK: Record<string, string> = { claude: "Antigravity gửi việc sang Claude", codex: "Antigravity gửi việc sang Codex" };
+const OUTBOUND_FALLBACK: Record<string, string> = { claude: L("Antigravity gửi việc sang Claude"), codex: L("Antigravity gửi việc sang Codex") };
 
 interface Call {
   id: string;
@@ -79,8 +80,8 @@ export function messageSummary(text: unknown, explicit?: unknown): string {
   const header = lines[0]?.match(/^\[From [^\]·]+(?:·[^\]·]*)*·\s*([^\]]+)\](?:\s|$)/i);
   const body = lines.find((line) => !line.startsWith("[From ") && !line.startsWith("#")) ?? "";
   const picked = given || header?.[1]?.trim() || body || lines[0] || "";
-  if (/^gAAAAA[A-Za-z0-9_-]{40,}={0,2}$/.test(picked)) return "Nội dung trao đổi đã mã hóa";
-  const plain = picked.replace(SECRET_PATTERN, "[đã ẩn]").replace(/[*`>#]|(^|\s)_+|_+(?=\s|$)/g, "$1").replace(/\s+/g, " ").trim();
+  if (/^gAAAAA[A-Za-z0-9_-]{40,}={0,2}$/.test(picked)) return L("Nội dung trao đổi đã mã hóa");
+  const plain = picked.replace(SECRET_PATTERN, L("[đã ẩn]")).replace(/[*`>#]|(^|\s)_+|_+(?=\s|$)/g, "$1").replace(/\s+/g, " ").trim();
   return plain.length > SUMMARY_MAX ? `${plain.slice(0, SUMMARY_MAX - 1)}…` : plain;
 }
 
@@ -116,12 +117,12 @@ function message(ownerId: string, call: Call, via: MessageVia, app: AgentApp, ke
   if (typeof cwd === "string" && cwd.trim()) target.cwd = cwd.trim();
   const machine = targetMachine(call.input);
   if (machine) target.machine = machine;
-  const summary = messageSummary(text, explicit) || `Gửi việc sang ${app}`;
+  const summary = messageSummary(text, explicit) || L("Gửi việc sang {0}", app);
   const replyTo = call.input?.replyTo ?? record(call.result).replyTo;
   return {
     id: `${ownerId}:${call.id}`, at: call.at, via, summary, target, status: callStatus(call), updatedAt: call.updatedAt ?? call.at,
     ...(typeof replyTo === "string" && replyTo ? { replyTo } : {}),
-    ...(callStatus(call) === "failed" ? { detail: "Kênh gửi báo lỗi; chưa xác nhận máy đích nhận được." } : {}),
+    ...(callStatus(call) === "failed" ? { detail: L("Kênh gửi báo lỗi; chưa xác nhận máy đích nhận được.") } : {}),
   };
 }
 

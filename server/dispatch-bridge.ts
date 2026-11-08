@@ -1,3 +1,4 @@
+import { L } from "../shared/i18n.ts";
 import { existsSync, readFileSync, realpathSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -34,13 +35,13 @@ export function codexDispatchEvidence(result: any, agent: AgentInfo, requestId: 
   const marker = `[Human via AI Agent Company · ${requestId}]`;
   const turn = result.turns.find((entry: any) => Array.isArray(entry.items) && entry.items.some((item: any) => item.type === "userMessage" && Array.isArray(item.content) && item.content.some((content: any) => content.type === "text" && typeof content.text === "string" && content.text.startsWith(`${marker}\n`))));
   if (!turn) return null;
-  if (turn.status === "completed" && turn.items.some((item: any) => item.type === "agentMessage" && item.phase === "final" && typeof item.text === "string" && item.text.trim())) return { status: "replied", detail: "Codex đã hoàn tất phản hồi cho tin nhắn trong chat đích" };
-  return { status: "delivered", detail: "Đã xác nhận tin nhắn xuất hiện trong chat Codex đích" };
+  if (turn.status === "completed" && turn.items.some((item: any) => item.type === "agentMessage" && item.phase === "final" && typeof item.text === "string" && item.text.trim())) return { status: "replied", detail: L("Codex đã hoàn tất phản hồi cho tin nhắn trong chat đích") };
+  return { status: "delivered", detail: L("Đã xác nhận tin nhắn xuất hiện trong chat Codex đích") };
 }
 
 function antigravityModule(runtime: DispatchBridgeRuntime): BridgeModule {
   const module = runtime.antigravity;
-  if (!module || !["inspectHumanConversation", "sendHumanMessage", "readHumanReceipt"].every(name => typeof module[name] === "function")) throw Object.assign(notSent(), { reason: "Bridge trên máy đích chưa hỗ trợ gửi tin từ dashboard tới Antigravity; cần cập nhật bridge" });
+  if (!module || !["inspectHumanConversation", "sendHumanMessage", "readHumanReceipt"].every(name => typeof module[name] === "function")) throw Object.assign(notSent(), { reason: L("Bridge trên máy đích chưa hỗ trợ gửi tin từ dashboard tới Antigravity; cần cập nhật bridge") });
   return module;
 }
 
@@ -48,18 +49,18 @@ function antigravityReceipt(value: any, agent: AgentInfo, requestId: string): { 
   if (value === null) return null;
   if (!value || value.requestId !== requestId || value.conversationId !== agent.sessionId || value.surface !== "desktop" || typeof value.cwd !== "string" || !samePath(value.cwd, agent.cwd!) || value.sender?.provider !== "human-web" || value.sender?.id !== "minh-spark-company") throw new Error("Antigravity receipt identity mismatch");
   const states: Record<string, { status: DispatchStatus; detail: string }> = {
-    pending: { status: "queued", detail: "Antigravity đã lưu yêu cầu và đang kiểm tra trước khi gửi" },
-    accepted: { status: "accepted", detail: "Antigravity Desktop đã tiếp nhận tin nhắn; chưa xác nhận phản hồi" },
-    refused: { status: "failed", detail: "Antigravity từ chối nhận tin nhắn" },
-    failed: { status: "failed", detail: "Không gửi được tin nhắn tới Antigravity" },
-    held: { status: "queued", detail: "Antigravity đang giữ yêu cầu chờ xử lý" },
-    unknown: { status: "unknown", detail: "Chưa xác nhận được kết quả từ Antigravity; không tự gửi lại" },
-    sent_unconfirmed: { status: "unknown", detail: "Đã chuyển tới Antigravity nhưng chưa có xác nhận; không tự gửi lại" },
+    pending: { status: "queued", detail: L("Antigravity đã lưu yêu cầu và đang kiểm tra trước khi gửi") },
+    accepted: { status: "accepted", detail: L("Antigravity Desktop đã tiếp nhận tin nhắn; chưa xác nhận phản hồi") },
+    refused: { status: "failed", detail: L("Antigravity từ chối nhận tin nhắn") },
+    failed: { status: "failed", detail: L("Không gửi được tin nhắn tới Antigravity") },
+    held: { status: "queued", detail: L("Antigravity đang giữ yêu cầu chờ xử lý") },
+    unknown: { status: "unknown", detail: L("Chưa xác nhận được kết quả từ Antigravity; không tự gửi lại") },
+    sent_unconfirmed: { status: "unknown", detail: L("Đã chuyển tới Antigravity nhưng chưa có xác nhận; không tự gửi lại") },
   };
-  return states[String(value.status)] ?? { status: "unknown", detail: "Antigravity trả trạng thái chưa xác minh; kiểm tra chat đích, không tự gửi lại" };
+  return states[String(value.status)] ?? { status: "unknown", detail: L("Antigravity trả trạng thái chưa xác minh; kiểm tra chat đích, không tự gửi lại") };
 }
 
-const REPLY_PENDING = "Tin trước gửi vào phiên này chưa xác nhận được phản hồi, nên bridge chưa cho gửi thêm để tránh gửi chồng; chưa chuyển nội dung";
+const REPLY_PENDING = L("Tin trước gửi vào phiên này chưa xác nhận được phản hồi, nên bridge chưa cho gửi thêm để tránh gửi chồng; chưa chuyển nội dung");
 
 export function createBridgeDispatchAdapter(options: { load?: () => Promise<DispatchBridgeRuntime> } = {}): DispatchAdapter {
   let loading: Promise<DispatchBridgeRuntime> | undefined;
@@ -77,10 +78,10 @@ export function createBridgeDispatchAdapter(options: { load?: () => Promise<Disp
     stopIdleEndpoint();
   };
   const claudeReceipt = (status: string): { status: DispatchStatus; detail: string } | null => {
-    if (status === "reply_received") return { status: "replied", detail: "Claude đã phản hồi tin nhắn trong chat đích" };
-    if (["refused", "expired", "send_failed"].includes(status)) return { status: "failed", detail: "Claude từ chối hoặc hết thời gian nhận tin" };
-    if (status === "delivered") return { status: "delivered", detail: "Claude xác nhận nhận tin nhắn" };
-    if (status === "accepted") return { status: "accepted", detail: "Claude đã tiếp nhận yêu cầu; chưa có phản hồi" };
+    if (status === "reply_received") return { status: "replied", detail: L("Claude đã phản hồi tin nhắn trong chat đích") };
+    if (["refused", "expired", "send_failed"].includes(status)) return { status: "failed", detail: L("Claude từ chối hoặc hết thời gian nhận tin") };
+    if (status === "delivered") return { status: "delivered", detail: L("Claude xác nhận nhận tin nhắn") };
+    if (status === "accepted") return { status: "accepted", detail: L("Claude đã tiếp nhận yêu cầu; chưa có phản hồi") };
     return null;
   };
   const awaitingReply = (agent: AgentInfo) => {
@@ -122,32 +123,32 @@ export function createBridgeDispatchAdapter(options: { load?: () => Promise<Disp
     const desktop = runtime.desktop.readClaudeDesktopContext(session, { account: rawAccounts.claude });
     if (desktop.status !== "matched" || desktop.accountFingerprint !== accounts.claude) throw notSent();
     const policy = runtime.inbound.readClaudeInboundPolicy(agent.cwd);
-    if (policy.value !== "accept") throw Object.assign(notSent(), { reason: "Claude chưa cho phép nhận tin từ kênh bên ngoài; cần crossSessionInbound=accept do sếp cấu hình" });
+    if (policy.value !== "accept") throw Object.assign(notSent(), { reason: L("Claude chưa cho phép nhận tin từ kênh bên ngoài; cần crossSessionInbound=accept do sếp cấu hình") });
     return { session: { ...session, desktop }, accounts };
   }
 
   return {
     async inspect(agent) {
-      if (!agent.sessionId || !agent.cwd || agent.parentId) return { available: false, reason: "Phiên đích chưa đủ danh tính và thư mục" };
+      if (!agent.sessionId || !agent.cwd || agent.parentId) return { available: false, reason: L("Phiên đích chưa đủ danh tính và thư mục") };
       try {
         const loaded = await runtime();
         if (agent.app === "antigravity") {
           const target = await antigravityModule(loaded).inspectHumanConversation({ conversationId: agent.sessionId, cwd: agent.cwd }, { timeoutMs: 5000 });
           if (target?.available !== true || target.conversationId !== agent.sessionId || target.surface !== "desktop" || typeof target.cwd !== "string" || !samePath(target.cwd, agent.cwd!)) throw notSent();
-          return { available: true, reason: "Đã xác minh Antigravity Desktop, cuộc trò chuyện và thư mục đích" };
+          return { available: true, reason: L("Đã xác minh Antigravity Desktop, cuộc trò chuyện và thư mục đích") };
         }
         if (agent.app === "codex") await codex(loaded, agent);
         else {
           claude(loaded, agent);
           if (awaitingReply(agent)) throw Object.assign(notSent(), { reason: REPLY_PENDING });
         }
-        return { available: true, reason: "Đã xác minh ứng dụng, tài khoản và phiên đích" };
+        return { available: true, reason: L("Đã xác minh ứng dụng, tài khoản và phiên đích") };
       } catch (error) {
         const message = error instanceof Error ? error.message : "";
-        const accountReason = message.startsWith("Claude account is unavailable:") ? "Bridge chưa xác minh được tài khoản Claude Desktop trên máy đích; mở Claude Desktop và hoàn tất đăng nhập." : message.startsWith("Codex account is unavailable:") ? "Bridge chưa xác minh được tài khoản Codex trên máy đích; mở Codex và hoàn tất đăng nhập." : undefined;
+        const accountReason = message.startsWith("Claude account is unavailable:") ? L("Bridge chưa xác minh được tài khoản Claude Desktop trên máy đích; mở Claude Desktop và hoàn tất đăng nhập.") : message.startsWith("Codex account is unavailable:") ? L("Bridge chưa xác minh được tài khoản Codex trên máy đích; mở Codex và hoàn tất đăng nhập.") : undefined;
         const code = (error as { code?: string })?.code;
-        const antigravityReason = agent.app === "antigravity" ? code === "ANTIGRAVITY_RECIPIENT_BUSY" ? "Cuộc trò chuyện Antigravity đang bận; chờ hoàn tất lượt hiện tại" : code === "ANTIGRAVITY_HUMAN_UNSUPPORTED" ? "Sidecar Antigravity chưa hỗ trợ gửi từ dashboard; cần cập nhật bridge và khởi động lại Antigravity" : "Chưa kết nối hoặc chưa xác minh đúng cuộc trò chuyện Antigravity Desktop" : undefined;
-        return { available: false, reason: (error as { reason?: string })?.reason ?? accountReason ?? antigravityReason ?? "Chưa kết nối được bridge hoặc chưa xác minh đúng tài khoản, phiên đích" };
+        const antigravityReason = agent.app === "antigravity" ? code === "ANTIGRAVITY_RECIPIENT_BUSY" ? L("Cuộc trò chuyện Antigravity đang bận; chờ hoàn tất lượt hiện tại") : code === "ANTIGRAVITY_HUMAN_UNSUPPORTED" ? L("Sidecar Antigravity chưa hỗ trợ gửi từ dashboard; cần cập nhật bridge và khởi động lại Antigravity") : L("Chưa kết nối hoặc chưa xác minh đúng cuộc trò chuyện Antigravity Desktop") : undefined;
+        return { available: false, reason: (error as { reason?: string })?.reason ?? accountReason ?? antigravityReason ?? L("Chưa kết nối được bridge hoặc chưa xác minh đúng tài khoản, phiên đích") };
       }
     },
     async check(agent, requestId) {
@@ -179,7 +180,7 @@ export function createBridgeDispatchAdapter(options: { load?: () => Promise<Disp
           if ((error as { deliveryState?: string })?.deliveryState === "not_sent") throw Object.assign(error as object, { sent: false });
           throw error;
         }
-        return antigravityReceipt(value, agent, requestId) ?? { status: "unknown", detail: "Antigravity chưa trả biên nhận; không tự gửi lại" };
+        return antigravityReceipt(value, agent, requestId) ?? { status: "unknown", detail: L("Antigravity chưa trả biên nhận; không tự gửi lại") };
       }
       if (agent.app === "codex") {
         let prepared;
@@ -187,8 +188,8 @@ export function createBridgeDispatchAdapter(options: { load?: () => Promise<Disp
         const { relay, accounts } = prepared;
         const response = await relay.requestDesktop("send_message_to_thread", { threadId: agent.sessionId, prompt: text }, { timeoutMs: 15000, accountContext: accounts, beforeSend: () => loaded.accounts.assertAccountIdentity(accounts) });
         const result = response.result;
-        if (result?.threadId !== agent.sessionId || result.success === false || result.isError === true || result.status !== undefined && !["accepted", "sent"].includes(result.status) || result.firstTurn && result.firstTurn.status !== "accepted") return { status: "unknown", detail: "Codex chưa xác nhận tiếp nhận yêu cầu; không tự gửi lại" };
-        return { status: "accepted", detail: "Codex Desktop đã tiếp nhận yêu cầu vào đúng chat" };
+        if (result?.threadId !== agent.sessionId || result.success === false || result.isError === true || result.status !== undefined && !["accepted", "sent"].includes(result.status) || result.firstTurn && result.firstTurn.status !== "accepted") return { status: "unknown", detail: L("Codex chưa xác nhận tiếp nhận yêu cầu; không tự gửi lại") };
+        return { status: "accepted", detail: L("Codex Desktop đã tiếp nhận yêu cầu vào đúng chat") };
       }
       if (agent.app !== "claude") throw notSent();
       const { session, accounts } = claude(loaded, agent);
@@ -209,7 +210,7 @@ export function createBridgeDispatchAdapter(options: { load?: () => Promise<Disp
           timer.unref();
           pending.set(requestId, { endpoint, msgId: sent.msgId, session, timer });
         }
-        return result ?? { status: "unknown", detail: "Đã chuyển tới kênh Claude nhưng chưa có xác nhận nhận tin; không tự gửi lại" };
+        return result ?? { status: "unknown", detail: L("Đã chuyển tới kênh Claude nhưng chưa có xác nhận nhận tin; không tự gửi lại") };
       } catch (error) {
         if ((error as { code?: string })?.code === "PEER_REPLY_PENDING") throw Object.assign(notSent(), { reason: REPLY_PENDING });
         throw error;

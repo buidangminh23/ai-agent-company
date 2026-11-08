@@ -1,3 +1,4 @@
+import { L } from "../../shared/i18n.ts";
 import { readdir, stat } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -39,7 +40,7 @@ export async function readSkills(): Promise<SkillsSnapshot> {
   const total = groups.reduce((n, g) => n + g.count, 0);
   return {
     connected: groups.length > 0,
-    note: groups.length ? "" : "Không tìm thấy thư mục skill trên máy hub",
+    note: groups.length ? "" : L("Không tìm thấy thư mục skill trên máy hub"),
     total,
     groups,
   };

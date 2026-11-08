@@ -1,3 +1,4 @@
+import { L } from "../../shared/i18n.ts";
 import * as THREE from "three";
 import { CSS2DObject } from "three/examples/jsm/renderers/CSS2DRenderer.js";
 import type { AgentMessage, MachineId, MessageStatus, Snapshot } from "../../shared/types.ts";
@@ -106,7 +107,7 @@ export class CommunicationScene {
       flow.ring.position.copy(state === "delivered" ? destination : start);
       flow.ring.scale.setScalar(quiet ? 1 : 1 + (Math.sin(flow.age * 3) + 1) * 0.25);
       flow.label.position.copy(flow.curve.getPoint(0.5)).add(new THREE.Vector3(0, 0.6, 0));
-      flow.label.element.textContent = flow.offline ? "Mất kết nối · chưa có cập nhật mới" : `${messageStatusLabel(state)}${end ? "" : " · chưa rõ phiên nhận"}`;
+      flow.label.element.textContent = flow.offline ? L("Mất kết nối · chưa có cập nhật mới") : `${messageStatusLabel(state)}${end ? "" : L(" · chưa rõ phiên nhận")}`;
       flow.label.element.dataset.state = flow.offline ? "failed" : state;
       flow.label.element.title = flow.message.summary;
     }

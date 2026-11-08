@@ -100,6 +100,8 @@ html, body { margin: 0; height: 100%; background: #0a0e15; overflow: hidden; fon
 .brand b { font-size: 0.9rem; letter-spacing: 0.12em; color: #ffffff; }
 .brand span { font-size: 0.78rem; font-weight: 600; color: #dbe6f4; font-variant-numeric: tabular-nums; }
 .brand span::before { display: inline-block; margin-right: 0.3rem; }
+.lang-toggle { min-width: 2.25rem; min-height: 1.75rem; padding: 0 0.5rem; border: 1px solid var(--line); border-radius: 0.4rem; background: transparent; color: #ffffff; font: 700 0.72rem/1 Inter, system-ui, sans-serif; letter-spacing: 0.08em; cursor: pointer; }
+.lang-toggle:hover, .lang-toggle:focus-visible { background: rgba(255, 255, 255, 0.12); outline: none; }
 .brand span[data-state="on"]::before { content: "●"; color: var(--working); animation: live-beat 2.4s ease-in-out infinite; }
 @keyframes live-beat { 50% { opacity: 0.45; } }
 .brand span[data-state="off"]::before { content: "●"; color: #ff5a5a; animation: live-beat 0.9s ease-in-out infinite; }

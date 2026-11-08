@@ -1,3 +1,4 @@
+import { L } from "../shared/i18n.ts";
 import * as THREE from "three";
 import { CSS2DObject } from "three/examples/jsm/renderers/CSS2DRenderer.js";
 import type { AgentInfo, AgentState } from "../shared/types.ts";
@@ -49,13 +50,13 @@ const AVOID_PUSH = 2.4;
 const PASS_SIDE = 0.55;
 
 export const STATE_LABELS: Record<AgentState, string> = {
-  thinking: "Đang nghĩ",
-  working: "Đang làm",
-  waiting: "Chờ sếp duyệt",
-  idle: "Rảnh",
+  thinking: L("Đang nghĩ"),
+  working: L("Đang làm"),
+  waiting: L("Chờ sếp duyệt"),
+  idle: L("Rảnh"),
 };
 
-const GENERIC_DETAILS = new Set(["", "Đang suy nghĩ", "Đang chạy"]);
+const GENERIC_DETAILS = new Set(["", L("Đang suy nghĩ"), L("Đang chạy")]);
 
 function activityText(info: AgentInfo): string {
   const detail = info.detail.trim();
@@ -468,7 +469,7 @@ export class AgentManager {
     const speech = ent.speech ?? this.communicationLines.get(info.id) ?? null;
     ent.label.classList.toggle("speaking", speech !== null);
     const said = speech === null ? "" : `<q>${escapeHtml(speech)}</q>`;
-    const markup = `<div class="agent-bubble-heading"><i></i><b>${escapeHtml(role)}</b><span>${deciding ? "Chờ sếp quyết" : STATE_LABELS[info.state]}</span></div><div class="agent-bubble-context"><strong>${escapeHtml(info.project)}</strong></div>${said || `<em>${escapeHtml(line)}</em>`}`;
+    const markup = `<div class="agent-bubble-heading"><i></i><b>${escapeHtml(role)}</b><span>${deciding ? L("Chờ sếp quyết") : STATE_LABELS[info.state]}</span></div><div class="agent-bubble-context"><strong>${escapeHtml(info.project)}</strong></div>${said || `<em>${escapeHtml(line)}</em>`}`;
     if (ent.labelMarkup === markup) return;
     ent.labelMarkup = markup;
     ent.label.innerHTML = markup;

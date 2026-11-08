@@ -1,3 +1,4 @@
+import { L } from "../shared/i18n.ts";
 import type { AgentInfo, AgentState, MachineId, RoleId } from "../shared/types.ts";
 import type { SeatTarget } from "./agents.ts";
 import type { LoungeCue } from "./scene/lounge.ts";
@@ -74,7 +75,7 @@ function busy(state: AgentState): boolean {
 }
 
 function stepLabel(phase: Phase): string {
-  return phase === "waiting" ? "Chờ sếp vào họp" : MEETING_STEPS.find((step) => step.state === phase)?.label ?? "";
+  return phase === "waiting" ? L("Chờ sếp vào họp") : MEETING_STEPS.find((step) => step.state === phase)?.label ?? "";
 }
 
 function chairTarget(spot: MeetingSpot, index: number, secretary: boolean): SeatTarget {
@@ -127,7 +128,7 @@ export class MeetingDirector {
     const ordered = !before || (task !== "" && task !== before.task) || before.state === "idle";
     if (!ordered || now - (before?.calledAt ?? -Infinity) < REPEAT_MS) return null;
     this.seen.get(agent.id)!.calledAt = now;
-    return { kind: newProject ? "project" : "order", project: project || "Việc mới", title: task || "Việc mới", machine: agent.machine, agentIds: [agent.id] };
+    return { kind: newProject ? "project" : "order", project: project || L("Việc mới"), title: task || L("Việc mới"), machine: agent.machine, agentIds: [agent.id] };
   }
 
   private enqueue(call: MeetingCall): void {
@@ -226,8 +227,8 @@ export class MeetingDirector {
     const agreeing = phase === "meetApprove" && this.time >= AGREE_AFTER_S;
     for (const id of active.call.agentIds) {
       let line: string | null = null;
-      if (phase === "meetListen" && id === presenter) line = `Kế hoạch: ${active.call.title}`;
-      else if (agreeing) line = id === presenter ? "Rõ! Bắt tay vào làm ngay." : "Rõ, thưa sếp!";
+      if (phase === "meetListen" && id === presenter) line = L("Kế hoạch: {0}", active.call.title);
+      else if (agreeing) line = id === presenter ? L("Rõ! Bắt tay vào làm ngay.") : L("Rõ, thưa sếp!");
       if (line === null && !active.spoken.has(id)) continue;
       stage.say(id, line);
       if (line === null) active.spoken.delete(id);

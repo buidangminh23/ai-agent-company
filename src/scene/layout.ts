@@ -1,3 +1,4 @@
+import { L } from "../../shared/i18n.ts";
 import type { MachineId, RoleId } from "../../shared/types.ts";
 import { ROLES } from "../../shared/roles.ts";
 
@@ -36,17 +37,17 @@ export let ZONE_BY_ID = new Map<ZoneId, Zone>();
 type ZoneSpec = Omit<Zone, "x0" | "x1" | "door"> & { x0: number; x1: number; doorX: number; side: "front" | "back" };
 
 const ZONE_SPECS: ZoneSpec[] = [
-  { id: "reception", label: "Phòng tiếp khách", x0: -30, x1: -13, z0: -24, z1: -13, floor: 0x6f5641, doorX: -16, side: "front" },
+  { id: "reception", label: L("Phòng tiếp khách"), x0: -30, x1: -13, z0: -24, z1: -13, floor: 0x6f5641, doorX: -16, side: "front" },
   { id: "ceo", label: "", x0: -12.5, x1: 12.5, z0: -24, z1: -13, floor: 0x8b6a4c, doorX: 0, side: "front" },
-  { id: "meeting", label: "Phòng họp", x0: 13, x1: 30, z0: -24, z1: -13, floor: 0x6f5641, doorX: 16, side: "front" },
+  { id: "meeting", label: L("Phòng họp"), x0: 13, x1: 30, z0: -24, z1: -13, floor: 0x6f5641, doorX: 16, side: "front" },
   { id: "room1", label: "SERVER", x0: -30, x1: -12, z0: -11, z1: 4, floor: 0xd8cfc0, doorX: -21, side: "front" },
   { id: "room2", label: "WORKSTATION", x0: -9, x1: 9, z0: -11, z1: 4, floor: 0xd8cfc0, doorX: 0, side: "front" },
   { id: "room3", label: "LAPTOP", x0: 12, x1: 30, z0: -11, z1: 4, floor: 0xd8cfc0, doorX: 21, side: "front" },
-  { id: "server", label: "Phòng máy chủ", x0: -30, x1: -19.5, z0: 6, z1: 17, floor: 0x2a313c, doorX: -28.75, side: "back" },
-  { id: "training", label: "Phòng đào tạo", x0: -19, x1: -10.5, z0: 6, z1: 17, floor: 0xc6b8a2, doorX: -17.75, side: "back" },
-  { id: "general", label: "Văn phòng chung", x0: -10, x1: 10, z0: 6, z1: 17, floor: 0xd9d1c4, doorX: 0, side: "back" },
-  { id: "common", label: "Khu sinh hoạt chung", x0: 10.5, x1: 19.5, z0: 6, z1: 23.5, floor: 0xc6b8a2, doorX: 15, side: "back" },
-  { id: "storage", label: "Kho & thiết bị", x0: 20, x1: 30, z0: 6, z1: 17, floor: 0xbdb3a3, doorX: 25, side: "back" },
+  { id: "server", label: L("Phòng máy chủ"), x0: -30, x1: -19.5, z0: 6, z1: 17, floor: 0x2a313c, doorX: -28.75, side: "back" },
+  { id: "training", label: L("Phòng đào tạo"), x0: -19, x1: -10.5, z0: 6, z1: 17, floor: 0xc6b8a2, doorX: -17.75, side: "back" },
+  { id: "general", label: L("Văn phòng chung"), x0: -10, x1: 10, z0: 6, z1: 17, floor: 0xd9d1c4, doorX: 0, side: "back" },
+  { id: "common", label: L("Khu sinh hoạt chung"), x0: 10.5, x1: 19.5, z0: 6, z1: 23.5, floor: 0xc6b8a2, doorX: 15, side: "back" },
+  { id: "storage", label: L("Kho & thiết bị"), x0: 20, x1: 30, z0: 6, z1: 17, floor: 0xbdb3a3, doorX: 25, side: "back" },
   { id: "lobby", label: "", x0: -6, x1: 6, z0: 17.5, z1: 23.5, floor: 0xe7e2da, doorX: 0, side: "back" },
 ];
 

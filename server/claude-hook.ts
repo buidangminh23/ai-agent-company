@@ -1,3 +1,4 @@
+import { L } from "../shared/i18n.ts";
 import { createHmac, randomBytes, randomUUID, timingSafeEqual } from "node:crypto";
 import { chmodSync, lstatSync, mkdirSync, readFileSync, renameSync, unlinkSync, writeFileSync } from "node:fs";
 import http, { type IncomingMessage, type ServerResponse } from "node:http";
@@ -34,7 +35,7 @@ interface Held extends ClaudeHookEntry {
 
 export const CLAUDE_HOOK_PATH = "/hook/claude/permission";
 export const CLAUDE_HOOK_MARKER = "claude-control-hook.mjs";
-export const CLAUDE_STOP_MESSAGE = "Sếp đã dừng lượt này từ web công ty";
+export const CLAUDE_STOP_MESSAGE = L("Sếp đã dừng lượt này từ web công ty");
 const MAX_PENDING = 64;
 const BODY_LIMIT = 256 * 1024;
 const INSTALL_CACHE_MS = 5000;

@@ -1,3 +1,4 @@
+import { L, locale } from "../shared/i18n.ts";
 import type { Snapshot } from "../shared/types.ts";
 import type { CanvasPanel } from "./scene/labels.ts";
 import type { Panels } from "./scene/build.ts";
@@ -29,7 +30,7 @@ function clipText(g: CanvasRenderingContext2D, text: string, max: number): strin
 function notConnected(g: CanvasRenderingContext2D, x: number, y: number, note: string, maxWidth = Infinity): void {
   g.fillStyle = AMBER;
   font(g, 700, 26);
-  g.fillText("Chưa nối nguồn", x, y);
+  g.fillText(L("Chưa nối nguồn"), x, y);
   g.fillStyle = MUTED;
   font(g, 500, 21);
   g.fillText(clipText(g, note, maxWidth), x, y + 34);
@@ -60,19 +61,19 @@ export function drawLed(p: CanvasPanel, snap: Snapshot | null = null): void {
   if (!snap) {
     g.fillStyle = MUTED;
     font(g, 600, 28);
-    g.fillText("Đang nối hub…", W / 2, H * 0.55);
+    g.fillText(L("Đang nối hub…"), W / 2, H * 0.55);
     p.commit();
     return;
   }
   const waiting = snap.agents.filter((agent) => agent.state === "waiting").length;
   const row = H * 0.56;
-  ledStat(g, W * 0.17, row, String(snap.activity.agentsWorking), "agent đang làm", GREEN);
-  ledStat(g, W * 0.39, row, String(waiting), "chờ duyệt", waiting ? AMBER : MUTED);
-  ledStat(g, W * 0.61, row, `${snap.activity.machinesOnline}/${snap.activity.machinesTotal}`, "máy online", snap.activity.machinesOnline ? BLUE : RED);
-  ledStat(g, W * 0.83, row, String(snap.activity.tasksToday), "lượt hôm nay", WHITE);
+  ledStat(g, W * 0.17, row, String(snap.activity.agentsWorking), L("agent đang làm"), GREEN);
+  ledStat(g, W * 0.39, row, String(waiting), L("chờ duyệt"), waiting ? AMBER : MUTED);
+  ledStat(g, W * 0.61, row, `${snap.activity.machinesOnline}/${snap.activity.machinesTotal}`, L("máy online"), snap.activity.machinesOnline ? BLUE : RED);
+  ledStat(g, W * 0.83, row, String(snap.activity.tasksToday), L("lượt hôm nay"), WHITE);
   g.fillStyle = MUTED;
   font(g, 500, 22);
-  g.fillText(`Cập nhật ${new Date(snap.generatedAt).toLocaleTimeString("vi-VN")}`, W / 2, H * 0.9);
+  g.fillText(L("Cập nhật {0}", new Date(snap.generatedAt).toLocaleTimeString(locale())), W / 2, H * 0.9);
   p.commit();
 }
 
@@ -117,7 +118,7 @@ function machineDetail(m: Snapshot["machines"][number]): { cpu: string; ram: str
 }
 
 function drawSites(g: CanvasRenderingContext2D, snap: Snapshot, x: number): void {
-  columnTitles(g, 88, [["Website", x], ["Mã", x + 360], ["Phản hồi", x + 450]]);
+  columnTitles(g, 88, [["Website", x], [L("Mã"), x + 360], [L("Phản hồi"), x + 450]]);
   snap.sites.forEach((s, i) => {
     const y = ROW_TOP + i * ROW_STEP;
     dot(g, x + 9, y - 8, s.ok ? GREEN : RED);
@@ -133,7 +134,7 @@ function drawSites(g: CanvasRenderingContext2D, snap: Snapshot, x: number): void
 }
 
 function drawMachineRows(g: CanvasRenderingContext2D, snap: Snapshot, x: number): void {
-  columnTitles(g, 88, [["Máy", x], ["CPU", x + 330], ["RAM", x + 430], ["Chạy", x + 600]]);
+  columnTitles(g, 88, [[L("Máy"), x], ["CPU", x + 330], ["RAM", x + 430], [L("Chạy"), x + 600]]);
   snap.machines.forEach((m, i) => {
     const y = ROW_TOP + i * ROW_STEP;
     const d = machineDetail(m);
@@ -144,7 +145,7 @@ function drawMachineRows(g: CanvasRenderingContext2D, snap: Snapshot, x: number)
     if (!d) {
       g.fillStyle = m.source === "none" ? MUTED : RED;
       font(g, 500, 20);
-      g.fillText(m.source === "none" ? "Chưa cài collector" : "Mất kết nối", x + 330, y);
+      g.fillText(m.source === "none" ? L("Chưa cài collector") : L("Mất kết nối"), x + 330, y);
       return;
     }
     g.fillStyle = GREEN;
@@ -159,10 +160,10 @@ function drawMachineRows(g: CanvasRenderingContext2D, snap: Snapshot, x: number)
 export function drawServerWall(p: CanvasPanel, snap: Snapshot): void {
   const g = p.ctx;
   const W = p.width;
-  header(g, W, "TRẠNG THÁI HỆ THỐNG");
+  header(g, W, L("TRẠNG THÁI HỆ THỐNG"));
   const sitesOk = snap.sites.filter((s) => s.ok).length;
   const online = snap.machines.filter((m) => m.online).length;
-  headerNote(g, W, `${sitesOk}/${snap.sites.length} web ổn · ${online}/${snap.machines.length} máy online`);
+  headerNote(g, W, L("{0}/{1} web ổn · {2}/{3} máy online", sitesOk, snap.sites.length, online, snap.machines.length));
   const mid = Math.round(W * 0.47);
   g.fillStyle = LINE;
   g.fillRect(mid, 70, 2, p.height - 100);
@@ -170,7 +171,7 @@ export function drawServerWall(p: CanvasPanel, snap: Snapshot): void {
   drawMachineRows(g, snap, mid + 36);
   g.fillStyle = MUTED;
   font(g, 500, 18);
-  g.fillText(`Cập nhật ${new Date(snap.generatedAt).toLocaleTimeString("vi-VN")}`, 28, p.height - 24);
+  g.fillText(L("Cập nhật {0}", new Date(snap.generatedAt).toLocaleTimeString(locale())), 28, p.height - 24);
   p.commit();
 }
 
@@ -185,7 +186,7 @@ function receptionRow(g: CanvasRenderingContext2D, site: Snapshot["sites"][numbe
   g.fillText(clipText(g, site.label, 520), 28, y + 56);
   g.fillStyle = site.ok ? GREEN : RED;
   font(g, 800, 40);
-  g.fillText(site.ok ? "Hoạt động" : "Có lỗi", 560, y + 46);
+  g.fillText(site.ok ? L("Hoạt động") : L("Có lỗi"), 560, y + 46);
   g.fillStyle = MUTED;
   font(g, 500, 22);
   g.fillText(clipText(g, site.ok ? `HTTP ${site.status ?? "—"}` : site.note, W - 1000), 560, y + 80);
@@ -196,7 +197,7 @@ function receptionRow(g: CanvasRenderingContext2D, site: Snapshot["sites"][numbe
   g.fillText(`${site.latencyMs ?? "—"}`, RECEPTION_LATENCY_X, y + 52);
   g.fillStyle = MUTED;
   font(g, 600, 22);
-  g.fillText("ms phản hồi", RECEPTION_LATENCY_X, y + 84);
+  g.fillText(L("ms phản hồi"), RECEPTION_LATENCY_X, y + 84);
 }
 
 export function drawReception(p: CanvasPanel, snap: Snapshot): void {
@@ -206,11 +207,11 @@ export function drawReception(p: CanvasPanel, snap: Snapshot): void {
   g.fillStyle = WHITE;
   g.textAlign = "left";
   font(g, 800, 40);
-  g.fillText("TRẠNG THÁI WEB", 28, 56);
+  g.fillText(L("TRẠNG THÁI WEB"), 28, 56);
   if (!snap.sites.length) {
     g.fillStyle = MUTED;
     font(g, 600, 30);
-    g.fillText("Chưa cấu hình web nào. Đặt MSC_SITES trong .env của hub.", 28, RECEPTION_ROW_TOP + 56);
+    g.fillText(L("Chưa cấu hình web nào. Đặt MSC_SITES trong .env của hub."), 28, RECEPTION_ROW_TOP + 56);
   }
   snap.sites.slice(0, 3).forEach((site, i) => {
     const y = RECEPTION_ROW_TOP + i * RECEPTION_ROW_STEP;
@@ -269,20 +270,20 @@ function wrapLines(g: CanvasRenderingContext2D, text: string, max: number, limit
 
 function drawAgenda(p: CanvasPanel, board: MeetingBoard): void {
   const g = p.ctx;
-  header(g, p.width, board.kind === "project" ? "KHỞI ĐỘNG DỰ ÁN" : "HỌP GIAO VIỆC");
+  header(g, p.width, board.kind === "project" ? L("KHỞI ĐỘNG DỰ ÁN") : L("HỌP GIAO VIỆC"));
   headerNote(g, p.width, board.step);
   g.fillStyle = AMBER;
   font(g, 800, 40);
   g.fillText(clipText(g, board.project, p.width - 56), 28, 116);
   g.fillStyle = MUTED;
   font(g, 600, 18);
-  g.fillText("NỘI DUNG SẾP GIAO", 28, 160);
+  g.fillText(L("NỘI DUNG SẾP GIAO"), 28, 160);
   g.fillStyle = WHITE;
   font(g, 600, 28);
   wrapLines(g, board.title, p.width - 56, 4).forEach((line, i) => g.fillText(line, 28, 200 + i * 40));
   g.fillStyle = GREEN;
   font(g, 600, 19);
-  g.fillText(`Sếp chủ trì · ${board.people} người dự họp`, 28, p.height - 24);
+  g.fillText(L("Sếp chủ trì · {0} người dự họp", board.people), 28, p.height - 24);
   p.commit();
 }
 
@@ -292,7 +293,7 @@ export function drawMeeting(p: CanvasPanel, snap: Snapshot, board: MeetingBoard 
     return;
   }
   const g = p.ctx;
-  header(g, p.width, "BẢNG DỰ ÁN");
+  header(g, p.width, L("BẢNG DỰ ÁN"));
   g.textAlign = "left";
   if (!snap.projects.connected) {
     notConnected(g, 28, 110, snap.projects.note);
@@ -327,7 +328,7 @@ export function drawMeeting(p: CanvasPanel, snap: Snapshot, board: MeetingBoard 
 
 export function drawTraining(p: CanvasPanel, snap: Snapshot): void {
   const g = p.ctx;
-  header(g, p.width, "THƯ VIỆN SKILL");
+  header(g, p.width, L("THƯ VIỆN SKILL"));
   g.textAlign = "left";
   if (!snap.skills.connected) {
     notConnected(g, 28, 110, snap.skills.note);
@@ -335,8 +336,8 @@ export function drawTraining(p: CanvasPanel, snap: Snapshot): void {
     return;
   }
   const total = snap.skills.total;
-  headerNote(g, p.width, `${total.toLocaleString("vi-VN")} skill`);
-  columnTitles(g, 88, [["Nguồn", 28], ["Số skill", 440], ["Tỉ lệ", 640]]);
+  headerNote(g, p.width, `${total.toLocaleString(locale())} skill`);
+  columnTitles(g, 88, [[L("Nguồn"), 28], [L("Số skill"), 440], [L("Tỉ lệ"), 640]]);
   snap.skills.groups.slice(0, 4).forEach((grp, i) => {
     const y = ROW_TOP + i * ROW_STEP;
     const share = total ? grp.count / total : 0;
@@ -345,7 +346,7 @@ export function drawTraining(p: CanvasPanel, snap: Snapshot): void {
     font(g, 700, 24);
     g.fillText(clipText(g, grp.source, 380), 58, y);
     g.fillStyle = GREEN;
-    g.fillText(grp.count.toLocaleString("vi-VN"), 440, y);
+    g.fillText(grp.count.toLocaleString(locale()), 440, y);
     g.fillStyle = MUTED;
     font(g, 500, 20);
     g.fillText(`${(share * 100).toFixed(share < 0.1 ? 1 : 0)}%`, 640, y);
@@ -356,13 +357,13 @@ export function drawTraining(p: CanvasPanel, snap: Snapshot): void {
   });
   g.fillStyle = MUTED;
   font(g, 500, 18);
-  g.fillText(`${snap.skills.groups.length} nguồn · trên máy hub`, 28, p.height - 24);
+  g.fillText(L("{0} nguồn · trên máy hub", snap.skills.groups.length), 28, p.height - 24);
   p.commit();
 }
 
 export function drawStorage(p: CanvasPanel, snap: Snapshot): void {
   const g = p.ctx;
-  header(g, p.width, "BẢN PHÁT HÀNH");
+  header(g, p.width, L("BẢN PHÁT HÀNH"));
   g.textAlign = "left";
   if (!snap.projects.connected) {
     notConnected(g, 28, 110, snap.projects.note);
@@ -376,7 +377,7 @@ export function drawStorage(p: CanvasPanel, snap: Snapshot): void {
   if (!releases.length) {
     g.fillStyle = MUTED;
     font(g, 500, 22);
-    g.fillText("Chưa có bản phát hành", 28, 110);
+    g.fillText(L("Chưa có bản phát hành"), 28, 110);
   }
   releases.forEach((r, i) => {
     const y = 104 + i * 46;
@@ -393,7 +394,7 @@ export function drawStorage(p: CanvasPanel, snap: Snapshot): void {
   const archived = snap.projects.repos.filter((r) => r.isArchived).length;
   g.fillStyle = MUTED;
   font(g, 500, 18);
-  g.fillText(`${snap.projects.repos.length} repo · ${archived} đã lưu trữ`, 28, p.height - 24);
+  g.fillText(L("{0} repo · {1} đã lưu trữ", snap.projects.repos.length, archived), 28, p.height - 24);
   p.commit();
 }
 
@@ -482,14 +483,14 @@ function drawMachine(p: CanvasPanel, m: Snapshot["machines"][number], accent: st
   g.fillText(m.id, 58, 64);
   g.fillStyle = MUTED;
   font(g, 500, 19);
-  g.fillText(clipText(g, [m.os, m.cpuModel && `${m.cpuModel} · ${m.cores} luồng`].filter(Boolean).join(" · ") || "", W - 56), 28, 98);
+  g.fillText(clipText(g, [m.os, m.cpuModel && L("{0} · {1} luồng", m.cpuModel, m.cores)].filter(Boolean).join(" · ") || "", W - 56), 28, 98);
   if (!m.online) {
     g.fillStyle = AMBER;
     font(g, 700, 30);
-    g.fillText(m.source === "none" ? "Chưa cài collector" : "Mất kết nối collector", 28, 200);
+    g.fillText(m.source === "none" ? L("Chưa cài collector") : L("Mất kết nối collector"), 28, 200);
     g.fillStyle = MUTED;
     font(g, 500, 21);
-    g.fillText("Giai đoạn 2: chạy hub ở chế độ collector trên máy này qua Tailscale", 28, 240);
+    g.fillText(L("Giai đoạn 2: chạy hub ở chế độ collector trên máy này qua Tailscale"), 28, 240);
     p.commit();
     return;
   }
@@ -499,11 +500,11 @@ function drawMachine(p: CanvasPanel, m: Snapshot["machines"][number], accent: st
   const gpu = m.gpu;
   const dy = gpu ? 0 : 62;
   if (gpu) meter(g, `GPU · ${gpu.tempC ?? "—"}°C · ${gpu.powerW?.toFixed(0) ?? "—"}W`, `${gpu.util}% · ${gb(gpu.memUsed)}/${gb(gpu.memTotal)} GB`, gpu.util / 100, 330, W);
-  meter(g, "Ổ đĩa", m.diskTotal ? `${gb(m.diskUsed ?? 0)} / ${gb(m.diskTotal)} GB` : "—", m.diskTotal ? (m.diskUsed ?? 0) / m.diskTotal : 0, 392 - dy, W);
+  meter(g, L("Ổ đĩa"), m.diskTotal ? `${gb(m.diskUsed ?? 0)} / ${gb(m.diskTotal)} GB` : "—", m.diskTotal ? (m.diskUsed ?? 0) / m.diskTotal : 0, 392 - dy, W);
   g.textAlign = "left";
   g.fillStyle = MUTED;
   font(g, 600, 22);
-  g.fillText("Mạng", 28, 454 - dy);
+  g.fillText(L("Mạng"), 28, 454 - dy);
   g.fillStyle = GREEN;
   font(g, 700, 22);
   g.fillText(`↓ ${rate(m.netRxBps)}`, 120, 454 - dy);
@@ -515,7 +516,7 @@ function drawMachine(p: CanvasPanel, m: Snapshot["machines"][number], accent: st
   g.fillStyle = MUTED;
   font(g, 500, 19);
   const up = m.uptimeSec ?? 0;
-  g.fillText(`LAN ${m.lanIp ?? "—"} · Tailscale ${m.tailscaleIp ?? "—"} · chạy ${Math.floor(up / 86400)}n ${Math.floor((up % 86400) / 3600)}g`, 28, 568 - dy);
+  g.fillText(L("LAN {0} · Tailscale {1} · chạy {2}n {3}g", m.lanIp ?? "—", m.tailscaleIp ?? "—", Math.floor(up / 86400), Math.floor((up % 86400) / 3600)), 28, 568 - dy);
   p.commit();
 }
 

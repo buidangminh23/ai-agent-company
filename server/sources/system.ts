@@ -1,3 +1,4 @@
+import { L } from "../../shared/i18n.ts";
 import { execFile } from "node:child_process";
 import os from "node:os";
 import path from "node:path";
@@ -54,17 +55,17 @@ function processName(value: unknown): string {
 
 function purpose(name: string, fallback: string): string {
   const descriptions: [RegExp, string][] = [
-    [/tailscale/i, "Kết nối mạng riêng giữa các máy"],
-    [/syncthing/i, "Đồng bộ tệp giữa các máy"],
-    [/cloudflared/i, "Kết nối dịch vụ qua Cloudflare Tunnel"],
-    [/runner/i, "Thực thi công việc CI/CD"],
-    [/postgres|mysql|redis/i, "Dịch vụ lưu trữ dữ liệu"],
-    [/docker/i, "Vận hành môi trường container"],
-    [/quota/i, "Theo dõi hạn mức sử dụng"],
-    [/(?:^|[.\-_])(?:ai-agent-company|msc)(?:$|[.\-_])/i, "Thành phần của AI Agent Company"],
-    [/(?:codex|claude)(?:[.\-_ ](?:mcp|native))?[.\-_ ]bridge/i, "Kết nối ứng dụng và công cụ"],
-    [/nginx|apache|httpd/i, "Máy chủ web"],
-    [/ollama/i, "Chạy mô hình AI trên máy"],
+    [/tailscale/i, L("Kết nối mạng riêng giữa các máy")],
+    [/syncthing/i, L("Đồng bộ tệp giữa các máy")],
+    [/cloudflared/i, L("Kết nối dịch vụ qua Cloudflare Tunnel")],
+    [/runner/i, L("Thực thi công việc CI/CD")],
+    [/postgres|mysql|redis/i, L("Dịch vụ lưu trữ dữ liệu")],
+    [/docker/i, L("Vận hành môi trường container")],
+    [/quota/i, L("Theo dõi hạn mức sử dụng")],
+    [/(?:^|[.\-_])(?:ai-agent-company|msc)(?:$|[.\-_])/i, L("Thành phần của AI Agent Company")],
+    [/(?:codex|claude)(?:[.\-_ ](?:mcp|native))?[.\-_ ]bridge/i, L("Kết nối ứng dụng và công cụ")],
+    [/nginx|apache|httpd/i, L("Máy chủ web")],
+    [/ollama/i, L("Chạy mô hình AI trên máy")],
   ];
   return descriptions.find(([pattern]) => pattern.test(name))?.[1] ?? fallback;
 }
@@ -123,9 +124,9 @@ export function parseWindowsServices(text: string, processes: SystemProcess[]): 
     const raw = String(row.State ?? "");
     const exitCode = numeric(row.ExitCode);
     const state: ServiceState = raw === "Running" ? "running" : raw === "Stopped" ? (exitCode && exitCode !== 1077 ? "error" : "stopped") : "unknown";
-    const mode = row.StartMode === "Auto" ? "Tự khởi động" : row.StartMode === "Disabled" ? "Đã vô hiệu hóa" : "Khởi động theo nhu cầu";
-    const detail = state === "error" ? `Dừng với mã lỗi ${exitCode}` : mode;
-    return service(`windows:${label(row.Name)}`, label(row.DisplayName || row.Name), state, numeric(row.ProcessId) || null, "Dịch vụ Windows", detail, processes);
+    const mode = row.StartMode === "Auto" ? L("Tự khởi động") : row.StartMode === "Disabled" ? L("Đã vô hiệu hóa") : L("Khởi động theo nhu cầu");
+    const detail = state === "error" ? L("Dừng với mã lỗi {0}", exitCode) : mode;
+    return service(`windows:${label(row.Name)}`, label(row.DisplayName || row.Name), state, numeric(row.ProcessId) || null, L("Dịch vụ Windows"), detail, processes);
   });
 }
 
@@ -136,8 +137,8 @@ export function parseLaunchAgents(text: string, processes: SystemProcess[]): Bac
     const pid = match[1] === "-" ? null : Number(match[1]);
     const exitCode = Number(match[2]);
     const state = pid ? "running" : exitCode > 0 ? "error" : exitCode < 0 ? "unknown" : "stopped";
-    const detail = pid ? "Đang chạy" : exitCode < 0 ? `Lần trước dừng bởi tín hiệu ${-exitCode}; chưa xác định nguyên nhân` : exitCode > 0 ? `Lần chạy gần nhất kết thúc với mã ${exitCode}` : "Đang chờ hoặc đã dừng";
-    return [service(`launchd:${label(match[3])}`, label(match[3]), state, pid, "Dịch vụ phiên đăng nhập macOS", detail, processes)];
+    const detail = pid ? L("Đang chạy") : exitCode < 0 ? L("Lần trước dừng bởi tín hiệu {0}; chưa xác định nguyên nhân", -exitCode) : exitCode > 0 ? L("Lần chạy gần nhất kết thúc với mã {0}", exitCode) : L("Đang chờ hoặc đã dừng");
+    return [service(`launchd:${label(match[3])}`, label(match[3]), state, pid, L("Dịch vụ phiên đăng nhập macOS"), detail, processes)];
   });
 }
 
@@ -145,7 +146,7 @@ export function parseLinuxServices(text: string, processes: SystemProcess[]): Ba
   return records(text).map((row) => {
     const active = String(row.active ?? "");
     const state: ServiceState = active === "active" ? "running" : active === "failed" ? "error" : active === "inactive" ? "stopped" : "unknown";
-    return service(`systemd:${label(row.unit)}`, label(row.unit), state, null, label(row.description) || "Dịch vụ Linux", state === "error" ? "systemd báo dịch vụ thất bại" : label(row.sub), processes);
+    return service(`systemd:${label(row.unit)}`, label(row.unit), state, null, label(row.description) || L("Dịch vụ Linux"), state === "error" ? L("systemd báo dịch vụ thất bại") : label(row.sub), processes);
   });
 }
 
@@ -158,7 +159,7 @@ export function parseContainers(text: string, now: number): BackgroundService[] 
     const unhealthy = row.health === "unhealthy";
     const state: ServiceState = unhealthy || raw === "dead" || raw === "restarting" || raw === "exited" && Boolean(exitCode) ? "error" : raw === "running" ? "running" : raw === "exited" || raw === "created" ? "stopped" : "unknown";
     const started = typeof row.startedAt === "string" ? Date.parse(row.startedAt) : NaN;
-    return { id: `docker:${row.id}`, name: label(row.name).replace(/^\//, ""), description: "Docker container", kind: "container", state, pid: null, cpuPercent: null, memoryBytes: null, uptimeSec: raw === "running" && Number.isFinite(started) ? Math.max(0, (now - started) / 1000) : null, detail: unhealthy ? "Health check không đạt" : raw === "restarting" ? "Đang khởi động lại" : state === "error" && exitCode ? `Kết thúc với mã lỗi ${exitCode}` : row.health === "starting" ? "Health check đang khởi động" : state === "running" ? "Đang chạy" : state === "stopped" ? "Đã dừng" : "Chưa xác định", important: true };
+    return { id: `docker:${row.id}`, name: label(row.name).replace(/^\//, ""), description: "Docker container", kind: "container", state, pid: null, cpuPercent: null, memoryBytes: null, uptimeSec: raw === "running" && Number.isFinite(started) ? Math.max(0, (now - started) / 1000) : null, detail: unhealthy ? L("Health check không đạt") : raw === "restarting" ? L("Đang khởi động lại") : state === "error" && exitCode ? L("Kết thúc với mã lỗi {0}", exitCode) : row.health === "starting" ? L("Health check đang khởi động") : state === "running" ? L("Đang chạy") : state === "stopped" ? L("Đã dừng") : L("Chưa xác định"), important: true };
   });
 }
 
@@ -170,12 +171,12 @@ export function applicationServices(processes: SystemProcess[], services: Backgr
     const key = proc.name.toLowerCase();
     groups.set(key, [...groups.get(key) ?? [], proc]);
   }
-  return [...groups].map(([key, list]) => ({ id: `app:${key}`, name: list[0].name, description: purpose(key, "Ứng dụng chạy trên máy"), kind: "app", state: "running", pid: list.length === 1 ? list[0].pid : null, cpuPercent: list.every((proc) => proc.cpuPercent !== null) ? Math.min(100, list.reduce((sum, proc) => sum + proc.cpuPercent!, 0)) : null, memoryBytes: list.every((proc) => proc.memoryBytes !== null) ? list.reduce((sum, proc) => sum + proc.memoryBytes!, 0) : null, uptimeSec: list.every((proc) => proc.uptimeSec !== null) ? Math.max(...list.map((proc) => proc.uptimeSec!)) : null, detail: `${list.length} tiến trình`, important: true }));
+  return [...groups].map(([key, list]) => ({ id: `app:${key}`, name: list[0].name, description: purpose(key, L("Ứng dụng chạy trên máy")), kind: "app", state: "running", pid: list.length === 1 ? list[0].pid : null, cpuPercent: list.every((proc) => proc.cpuPercent !== null) ? Math.min(100, list.reduce((sum, proc) => sum + proc.cpuPercent!, 0)) : null, memoryBytes: list.every((proc) => proc.memoryBytes !== null) ? list.reduce((sum, proc) => sum + proc.memoryBytes!, 0) : null, uptimeSec: list.every((proc) => proc.uptimeSec !== null) ? Math.max(...list.map((proc) => proc.uptimeSec!)) : null, detail: L("{0} tiến trình", list.length), important: true }));
 }
 
 function issue(source: string, error: unknown): string {
   const code = error && typeof error === "object" && "code" in error ? String(error.code) : "";
-  return code === "ENOENT" ? `${source}: công cụ chưa được cài hoặc không có trong PATH.` : `${source}: chưa đọc được dữ liệu (thiếu quyền, hết thời gian hoặc dịch vụ chưa sẵn sàng).`;
+  return code === "ENOENT" ? L("{0}: công cụ chưa được cài hoặc không có trong PATH.", source) : L("{0}: chưa đọc được dữ liệu (thiếu quyền, hết thời gian hoặc dịch vụ chưa sẵn sàng).", source);
 }
 
 const sampler = new ProcessSampler();
@@ -212,18 +213,18 @@ export async function collectSystemInventory(platform: NodeJS.Platform, execute:
     if (!docker) return [];
     const ids = idsText.split(/\s+/).filter((id) => /^[a-f0-9]{12,64}$/.test(id));
     if (!ids.length) return [];
-    if (ids.length > MAX_CONTAINERS) issues.push(`Docker: chỉ hiển thị ${MAX_CONTAINERS} container đầu tiên.`);
+    if (ids.length > MAX_CONTAINERS) issues.push(L("Docker: chỉ hiển thị {0} container đầu tiên.", MAX_CONTAINERS));
     const template = '{"id":{{json .Id}},"name":{{json .Name}},"status":{{json .State.Status}},"exitCode":{{json .State.ExitCode}},"startedAt":{{json .State.StartedAt}},"health":{{if .State.Health}}{{json .State.Health.Status}}{{else}}null{{end}}}';
     return parseContainers(await execute(docker, ["inspect", "--format", template, ...ids.slice(0, MAX_CONTAINERS)], 5000), now);
   };
   const [processes, rawServices, containers] = await Promise.all([
-    collect("Tiến trình", readProcesses, []),
-    collect("Dịch vụ hệ điều hành", readServices, null),
+    collect(L("Tiến trình"), readProcesses, []),
+    collect(L("Dịch vụ hệ điều hành"), readServices, null),
     collect("Docker", readContainers, []),
   ]);
   let services: BackgroundService[] = [];
   if (rawServices) {
-    try { services = rawServices.parse(rawServices.text, processes); } catch (error) { issues.push(issue("Dịch vụ hệ điều hành", error)); }
+    try { services = rawServices.parse(rawServices.text, processes); } catch (error) { issues.push(issue(L("Dịch vụ hệ điều hành"), error)); }
   }
   services.push(...applicationServices(processes, services), ...containers);
   services.sort((a, b) => Number(b.state === "error") - Number(a.state === "error") || Number(b.important) - Number(a.important) || a.name.localeCompare(b.name));

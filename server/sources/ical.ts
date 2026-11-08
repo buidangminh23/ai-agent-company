@@ -1,3 +1,4 @@
+import { L } from "../../shared/i18n.ts";
 import type { CalendarEvent } from "../../shared/inbox.ts";
 
 export interface DateValue {
@@ -326,7 +327,7 @@ export function expandEvents(calendar: ParsedCalendar, label: string, windowStar
       out.push({
         id: `${event.uid || label}@${start}`,
         calendar: label,
-        title: event.summary || "(Không có tiêu đề)",
+        title: event.summary || L("(Không có tiêu đề)"),
         start: new Date(start).toISOString(),
         end: new Date(end).toISOString(),
         allDay: event.start.allDay,

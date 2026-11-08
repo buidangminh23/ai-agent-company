@@ -1,3 +1,4 @@
+import { L } from "../shared/i18n.ts";
 import type { AgentApp, AgentInfo, MachineId } from "../shared/types.ts";
 import type { SeatTarget } from "./agents.ts";
 import type { WorkTask } from "./scene/work.ts";
@@ -26,7 +27,7 @@ interface StaffSeat {
 }
 const LIFE_APPS: AgentApp[] = ["claude", "codex", "antigravity"];
 const LIFE_MACHINE: MachineId = "LAPTOP";
-const LIFE_DETAIL = "Hoạt động minh hoạ trong văn phòng, không phải phiên agent thật";
+const LIFE_DETAIL = L("Hoạt động minh hoạ trong văn phòng, không phải phiên agent thật");
 const SEAT_BACK = 0.85;
 const SOFA_FRONT = 0.7;
 const GUEST_STAY_S = 7 * 60;
@@ -38,12 +39,12 @@ const STORAGE_LANE_MIN_Z = 8.4;
 const RACK_STOP_S = 75;
 const TECH_RACKS: [number, -1 | 1, number][] = [[0, -1, 3], [1, 1, 3], [0, 1, 0], [1, -1, 0]];
 const CEO_FRONT_Z = -16.4;
-const PERSONAL_PROJECT = "Văn phòng chung";
+const PERSONAL_PROJECT = L("Văn phòng chung");
 const PERSONAL_TASK_S = 140;
 const PERSONAL_DESK_BACK = 0.85;
 const PERSONAL_TASKS = [
-  "Sắp lịch học tuần này", "Dọn hộp thư cá nhân", "Theo dõi chi tiêu tháng", "Ôn bài môn học",
-  "Ghi chú ý tưởng mới", "Đặt lịch hẹn", "Sắp xếp tài liệu cá nhân", "Cập nhật việc cần làm",
+  L("Sắp lịch học tuần này"), L("Dọn hộp thư cá nhân"), L("Theo dõi chi tiêu tháng"), L("Ôn bài môn học"),
+  L("Ghi chú ý tưởng mới"), L("Đặt lịch hẹn"), L("Sắp xếp tài liệu cá nhân"), L("Cập nhật việc cần làm"),
 ];
 const PERSONAL_TABLE_SEATS = [0, 1];
 const STAFF_TRAINING_SEATS = [0, 3, 4, 7, 9, 10, 13, 16];
@@ -132,7 +133,7 @@ function trainingChairs(): Spot[] {
 
 function trainingSeats(): StaffSeat[] {
   const seats = trainingChairs();
-  return STAFF_TRAINING_SEATS.map((i) => ({ key: `training:${i}`, spot: seats[i], title: "Học skill mới", project: "Phòng đào tạo", extra: { task: "learn" as const } }));
+  return STAFF_TRAINING_SEATS.map((i) => ({ key: `training:${i}`, spot: seats[i], title: L("Học skill mới"), project: L("Phòng đào tạo"), extra: { task: "learn" as const } }));
 }
 
 export function traineeSeats(): SeatTarget[] {
@@ -154,7 +155,7 @@ function rotatingStaff(nowS: number): Member[] {
 
 function training(): Member[] {
   const cx = centerX("training") + TRAINING_DESK_DX;
-  return [{ id: `${LIFE_PREFIX}training:host`, app: "claude", title: "Giảng bài về skill", project: "Phòng đào tạo", target: target("training:host", stand(cx, TRAINING_HOST_Z, 0), { task: "teach" }) }];
+  return [{ id: `${LIFE_PREFIX}training:host`, app: "claude", title: L("Giảng bài về skill"), project: L("Phòng đào tạo"), target: target("training:host", stand(cx, TRAINING_HOST_Z, 0), { task: "teach" }) }];
 }
 
 function reception(nowS: number): Member[] {
@@ -164,8 +165,8 @@ function reception(nowS: number): Member[] {
     couch(cx - 3.25, -18.0, Math.PI / 2), couch(cx - 3.25, -18.75, Math.PI / 2),
     couch(cx + 3.25, -18.6, -Math.PI / 2), couch(cx + 3.25, -17.85, -Math.PI / 2),
   ];
-  const people = rotatingSeats("reception", "Phòng tiếp khách", "Khách tới làm việc", seats, [0, 2, 3, 6], GUEST_STAY_S, nowS, () => talk("reception"));
-  people.push({ id: `${LIFE_PREFIX}reception:host`, title: "Tiếp khách", project: "Phòng tiếp khách", target: target("reception:host", stand(cx + 0.2, -16.7, Math.PI), talk("reception")) });
+  const people = rotatingSeats("reception", L("Phòng tiếp khách"), L("Khách tới làm việc"), seats, [0, 2, 3, 6], GUEST_STAY_S, nowS, () => talk("reception"));
+  people.push({ id: `${LIFE_PREFIX}reception:host`, title: L("Tiếp khách"), project: L("Phòng tiếp khách"), target: target("reception:host", stand(cx + 0.2, -16.7, Math.PI), talk("reception")) });
   return people;
 }
 
@@ -183,7 +184,7 @@ function personal(nowS: number, taken: Set<string>): Member[] {
   const tables = ROUND_TABLE_X.flatMap((tx, t) => PERSONAL_TABLE_SEATS.map((k) => {
     const a = ROUND_CHAIR_ANGLES[k];
     const spot = chair(tx + Math.cos(a) * ROUND_CHAIR_R, ROUND_TABLE_Z + Math.sin(a) * ROUND_CHAIR_R, -a - Math.PI / 2);
-    return { id: `${LIFE_PREFIX}personal:table:${t}:${k}`, title: "Bàn kế hoạch cá nhân", project: PERSONAL_PROJECT, target: target(`personal:table:${t}:${k}`, spot, talk(`personal:table:${t}`)) };
+    return { id: `${LIFE_PREFIX}personal:table:${t}:${k}`, title: L("Bàn kế hoạch cá nhân"), project: PERSONAL_PROJECT, target: target(`personal:table:${t}:${k}`, spot, talk(`personal:table:${t}`)) };
   }));
   return [...desks, ...tables];
 }
@@ -195,8 +196,8 @@ function common(): Member[] {
     const alt = target(`common:alt:${k}`, stand(z.x0 + 1.2 + k * 0.85, 13, Math.PI), talk("common:standing"));
     return {
       id: `${LIFE_PREFIX}common:${index}`,
-      title: spot.activity === "pool" ? "Chơi bi-a giải lao" : spot.activity === "bar" ? "Pha cà phê" : "Nghỉ giải lao",
-      project: "Khu sinh hoạt chung",
+      title: spot.activity === "pool" ? L("Chơi bi-a giải lao") : spot.activity === "bar" ? L("Pha cà phê") : L("Nghỉ giải lao"),
+      project: L("Khu sinh hoạt chung"),
       target: { key: `lounge:${index}`, x: spot.x, z: spot.z, facing: spot.facing, pose: spot.pose, approach: spot.approach, alt },
     };
   });
@@ -209,8 +210,8 @@ function storage(nowS: number): Member[] {
   const routeA = [lane(x0 + 1.6, 7.3, Math.PI), lane(x0 + 2.4, 14.4, Math.PI), lane(x0 + STORAGE_SCREEN_DX + 1.6, 11.6, 0), lane(x0 + 4.8, 12.7, Math.PI / 2)];
   const routeB = [lane(x0 + 6.2, 14.6, 0), lane(z.x1 - 1.3, 11.0, Math.PI / 2), lane(x0 + 6.8, 7.3, Math.PI), lane(x0 + 3.2, 14.4, Math.PI)];
   return [
-    patrol("storage:a", "Kho & thiết bị", "Xếp thiết bị lên kệ", routeA, CARRY_STOP_S, nowS, "carry"),
-    patrol("storage:b", "Kho & thiết bị", "Kiểm kê thùng hàng", routeB, CARRY_STOP_S + 7, nowS, "carry"),
+    patrol("storage:a", L("Kho & thiết bị"), L("Xếp thiết bị lên kệ"), routeA, CARRY_STOP_S, nowS, "carry"),
+    patrol("storage:b", L("Kho & thiết bị"), L("Kiểm kê thùng hàng"), routeB, CARRY_STOP_S + 7, nowS, "carry"),
   ];
 }
 
@@ -222,18 +223,18 @@ function server(nowS: number): Member[] {
     const z = slot.z + RACK_FRONT + RACK_REACH;
     return stand(slot.x, z, Math.PI, { x: cx, z });
   });
-  return [patrol("server:tech", "Phòng máy chủ", "Bảo trì tủ rack", stops, RACK_STOP_S, nowS, "rack")];
+  return [patrol("server:tech", L("Phòng máy chủ"), L("Bảo trì tủ rack"), stops, RACK_STOP_S, nowS, "rack")];
 }
 
 function lobby(): Member[] {
-  return [{ id: `${LIFE_PREFIX}lobby:guard`, title: "Trực cổng sảnh", project: "Sảnh", target: target("lobby:guard", stand(4.4, 19.8, -Math.PI / 2), { task: "inspect" }) }];
+  return [{ id: `${LIFE_PREFIX}lobby:guard`, title: L("Trực cổng sảnh"), project: L("Sảnh"), target: target("lobby:guard", stand(4.4, 19.8, -Math.PI / 2), { task: "inspect" }) }];
 }
 
 function ceo(nowS: number): Member[] {
   const shelf = 12.5 * SX - 0.4;
   const front = (x: number, zz: number, facing: number) => stand(x, zz, facing, { x, z: CEO_FRONT_Z });
   const stops = [front(-shelf + 0.8, -19.6, -Math.PI / 2), front(3.6, -18.2, -Math.PI / 2), front(shelf - 0.8, -19.6, Math.PI / 2), front(-3.6, -18.2, Math.PI / 2)];
-  return [{ ...patrol("ceo:assistant", "Văn phòng CEO", "Chuẩn bị hồ sơ cho sếp", stops, ROUND_STOP_S + 15, nowS, "inspect"), app: "claude" }];
+  return [{ ...patrol("ceo:assistant", L("Văn phòng CEO"), L("Chuẩn bị hồ sơ cho sếp"), stops, ROUND_STOP_S + 15, nowS, "inspect"), app: "claude" }];
 }
 
 function toAgent(m: Member, at: string): AgentInfo {

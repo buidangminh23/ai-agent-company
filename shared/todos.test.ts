@@ -57,3 +57,11 @@ test("counts split open work, overdue and today's finished items", () => {
   const board = [todo("a", "todo", 0, { due: "2026-11-01" }), todo("b", "doing", 0), todo("c", "done", 0, { doneAt: "2026-11-04T02:00:00Z" }), todo("d", "done", 1, { doneAt: "2026-11-02T02:00:00Z" })];
   assert.deepEqual(todoCounts(board, TODAY), { todo: 1, doing: 1, done: 2, overdue: 1, doneToday: 1 });
 });
+
+test("quick add understands English due dates and priorities", () => {
+  assert.equal(parseQuickAdd("Send the quote tomorrow !high", TODAY).due, "2026-11-05");
+  assert.equal(parseQuickAdd("Send the quote tomorrow !high", TODAY).priority, "high");
+  assert.equal(parseQuickAdd("Review today !low", TODAY).due, TODAY);
+  assert.equal(parseQuickAdd("Review today !low", TODAY).priority, "low");
+  assert.equal(parseQuickAdd("Plan fri", TODAY).title, "Plan");
+});

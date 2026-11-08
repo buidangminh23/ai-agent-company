@@ -1,3 +1,4 @@
+import { L } from "./i18n.ts";
 import type { AgentInfo, AgentMessage, MessageStatus, SentMessage } from "./types.ts";
 
 const MAX_MESSAGES = 40;
@@ -17,8 +18,8 @@ export function messageStatus(message: Pick<AgentMessage, "status">): MessageSta
 
 export function messageStatusLabel(status?: MessageStatus): string {
   const labels: Record<MessageStatus, string> = {
-    queued: "Đang chờ gửi", sending: "Đang gửi", accepted: "Đã tiếp nhận yêu cầu",
-    delivered: "Đã xác nhận nhận", replied: "Đã phản hồi", failed: "Gửi thất bại", unknown: "Chưa xác minh kết quả",
+    queued: L("Đang chờ gửi"), sending: L("Đang gửi"), accepted: L("Đã tiếp nhận yêu cầu"),
+    delivered: L("Đã xác nhận nhận"), replied: L("Đã phản hồi"), failed: L("Gửi thất bại"), unknown: L("Chưa xác minh kết quả"),
   };
   return labels[status ?? "unknown"];
 }
@@ -59,7 +60,7 @@ export function resolveMessages(agents: AgentInfo[]): AgentMessage[] {
         status: sent.status ?? "unknown", updatedAt: sent.updatedAt ?? sent.at,
         ...(sent.detail ? { detail: sent.detail } : {}), ...(sent.replyTo ? { replyTo: sent.replyTo } : {}),
         ...((recipient?.machine ?? sent.target.machine) ? { targetMachine: recipient?.machine ?? sent.target.machine } : {}),
-        targetLabel: recipient?.title ?? `${sent.target.app} · chưa xác định phiên nhận`,
+        targetLabel: recipient?.title ?? L("{0} · chưa xác định phiên nhận", sent.target.app),
       };
       const previous = out.get(sent.id);
       if (!previous || (value.updatedAt ?? value.at) >= (previous.updatedAt ?? previous.at)) out.set(sent.id, value);

@@ -1,22 +1,23 @@
+import { L } from "../../shared/i18n.ts";
 export const CEO_TIMELINE = [
-  { state: "typing", duration: 28, label: "Làm việc trên ba màn hình" },
-  { state: "reviewing", duration: 12, label: "Kiểm tra số liệu" },
-  { state: "reading", duration: 16, label: "Đọc và duyệt hồ sơ" },
-  { state: "coffee", duration: 16, label: "Uống cà phê" },
-  { state: "phone", duration: 14, label: "Trao đổi qua điện thoại" },
-  { state: "briefing", duration: 14, label: "Trao đổi với trợ lý Claude" },
-  { state: "stretching", duration: 10, label: "Giãn vai và cổ tay" },
-  { state: "standing", duration: 4, label: "Đứng dậy kiểm tra" },
-  { state: "walking", duration: 20, label: "Đi kiểm tra văn phòng" },
-  { state: "inspecting", duration: 14, label: "Kiểm tra và ghi chú" },
-  { state: "returning", duration: 20, label: "Quay về bàn làm việc" },
-  { state: "massageWalking", duration: 18, label: "Đi đến ghế massage" },
-  { state: "massageSitting", duration: 8, label: "Ngồi vào ghế massage" },
-  { state: "massaging", duration: 24, label: "Thư giãn trên ghế massage" },
-  { state: "massageStanding", duration: 8, label: "Rời ghế massage" },
-  { state: "massageReturning", duration: 18, label: "Trở lại bàn làm việc" },
-  { state: "sitting", duration: 4, label: "Trở lại ghế" },
-  { state: "resting", duration: 14, label: "Ngả lưng nghỉ ngơi" },
+  { state: "typing", duration: 28, label: L("Làm việc trên ba màn hình") },
+  { state: "reviewing", duration: 12, label: L("Kiểm tra số liệu") },
+  { state: "reading", duration: 16, label: L("Đọc và duyệt hồ sơ") },
+  { state: "coffee", duration: 16, label: L("Uống cà phê") },
+  { state: "phone", duration: 14, label: L("Trao đổi qua điện thoại") },
+  { state: "briefing", duration: 14, label: L("Trao đổi với trợ lý Claude") },
+  { state: "stretching", duration: 10, label: L("Giãn vai và cổ tay") },
+  { state: "standing", duration: 4, label: L("Đứng dậy kiểm tra") },
+  { state: "walking", duration: 20, label: L("Đi kiểm tra văn phòng") },
+  { state: "inspecting", duration: 14, label: L("Kiểm tra và ghi chú") },
+  { state: "returning", duration: 20, label: L("Quay về bàn làm việc") },
+  { state: "massageWalking", duration: 18, label: L("Đi đến ghế massage") },
+  { state: "massageSitting", duration: 8, label: L("Ngồi vào ghế massage") },
+  { state: "massaging", duration: 24, label: L("Thư giãn trên ghế massage") },
+  { state: "massageStanding", duration: 8, label: L("Rời ghế massage") },
+  { state: "massageReturning", duration: 18, label: L("Trở lại bàn làm việc") },
+  { state: "sitting", duration: 4, label: L("Trở lại ghế") },
+  { state: "resting", duration: 14, label: L("Ngả lưng nghỉ ngơi") },
 ] as const;
 
 export type CeoState = typeof CEO_TIMELINE[number]["state"];
@@ -96,15 +97,15 @@ export function sampleMassageRoute(progress: number, returning = false): CeoRout
 }
 
 export const MEETING_STEPS = [
-  { state: "meetRise", duration: 3.2, label: "Đứng dậy đi họp" },
-  { state: "meetWalk", duration: 0, label: "Sang phòng họp" },
-  { state: "meetSit", duration: 3.2, label: "Ngồi vào ghế chủ trì" },
-  { state: "meetOpen", duration: 6, label: "Khai mạc cuộc họp" },
-  { state: "meetOrder", duration: 12, label: "Ra lệnh giao việc" },
-  { state: "meetListen", duration: 14, label: "Nghe đội trình bày kế hoạch" },
-  { state: "meetApprove", duration: 5, label: "Duyệt kế hoạch" },
-  { state: "meetStand", duration: 3, label: "Kết thúc cuộc họp" },
-  { state: "meetReturn", duration: 0, label: "Trở lại bàn làm việc" },
+  { state: "meetRise", duration: 3.2, label: L("Đứng dậy đi họp") },
+  { state: "meetWalk", duration: 0, label: L("Sang phòng họp") },
+  { state: "meetSit", duration: 3.2, label: L("Ngồi vào ghế chủ trì") },
+  { state: "meetOpen", duration: 6, label: L("Khai mạc cuộc họp") },
+  { state: "meetOrder", duration: 12, label: L("Ra lệnh giao việc") },
+  { state: "meetListen", duration: 14, label: L("Nghe đội trình bày kế hoạch") },
+  { state: "meetApprove", duration: 5, label: L("Duyệt kế hoạch") },
+  { state: "meetStand", duration: 3, label: L("Kết thúc cuộc họp") },
+  { state: "meetReturn", duration: 0, label: L("Trở lại bàn làm việc") },
 ] as const;
 
 export type MeetingState = typeof MEETING_STEPS[number]["state"];

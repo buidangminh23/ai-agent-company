@@ -1,3 +1,4 @@
+import { L } from "./i18n.ts";
 export type TodoStatus = "todo" | "doing" | "done";
 export type TodoPriority = "high" | "normal" | "low";
 
@@ -25,12 +26,12 @@ export interface TodoFields {
 
 export type DueTone = "overdue" | "today" | "soon" | "later";
 
-export const TODO_STATUSES: [TodoStatus, string][] = [["todo", "Cần làm"], ["doing", "Đang làm"], ["done", "Xong"]];
-export const PRIORITY_LABELS: Record<TodoPriority, string> = { high: "Cao", normal: "Thường", low: "Thấp" };
+export const TODO_STATUSES: [TodoStatus, string][] = [["todo", L("Cần làm")], ["doing", L("Đang làm")], ["done", "Xong"]];
+export const PRIORITY_LABELS: Record<TodoPriority, string> = { high: "Cao", normal: L("Thường"), low: L("Thấp") };
 export const TODO_LIMITS = { title: 200, note: 2000, project: 60 };
 
 const DAY_MS = 86_400_000;
-const WEEKDAYS = ["CN", "Thứ 2", "Thứ 3", "Thứ 4", "Thứ 5", "Thứ 6", "Thứ 7"];
+const WEEKDAYS = ["CN", L("Thứ 2"), L("Thứ 3"), L("Thứ 4"), L("Thứ 5"), L("Thứ 6"), L("Thứ 7")];
 const EDGE = "(^|\\s)";
 const END = "(?=\\s|$)";
 
@@ -81,6 +82,9 @@ const DATE_RULES: DateRule[] = [
   { pattern: new RegExp(`${EDGE}(ngày mai)${END}`, "iu"), resolve: (_, today) => addDays(today, 1) },
   { pattern: new RegExp(`${EDGE}(mai)${END}`, "u"), resolve: (_, today) => addDays(today, 1) },
   { pattern: new RegExp(`${EDGE}(chủ nhật|cn)${END}`, "iu"), resolve: (_, today) => nextWeekday(today, 0) },
+  { pattern: new RegExp(`${EDGE}(today)${END}`, "iu"), resolve: (_, today) => today },
+  { pattern: new RegExp(`${EDGE}(tomorrow|tmr)${END}`, "iu"), resolve: (_, today) => addDays(today, 1) },
+  { pattern: new RegExp(`${EDGE}(sun|sunday|mon|monday|tue|tuesday|wed|wednesday|thu|thursday|fri|friday|sat|saturday)${END}`, "iu"), resolve: (match, today) => nextWeekday(today, ["sun", "mon", "tue", "wed", "thu", "fri", "sat"].indexOf(match[2].slice(0, 3).toLowerCase())) },
   { pattern: new RegExp(`${EDGE}(?:thứ\\s?|t)([2-7])${END}`, "iu"), resolve: (match, today) => nextWeekday(today, Number(match[2]) - 1) },
   { pattern: new RegExp(`${EDGE}(\\d{1,2})[/-](\\d{1,2})(?:[/-](\\d{2}|\\d{4}))?${END}`, "u"), resolve: (match, today) => calendarDate(today, Number(match[2]), Number(match[3]), match[4] ? Number(match[4]) : null) },
 ];
@@ -93,9 +97,9 @@ export function parseQuickAdd(raw: string, today: string): TodoFields {
   const cut = (match: RegExpMatchArray) => {
     rest = `${rest.slice(0, match.index!)}${match[1] ?? ""} ${rest.slice(match.index! + match[0].length)}`;
   };
-  const high = rest.match(new RegExp(`${EDGE}(?:!!|!cao|!gấp)${END}`, "iu"));
-  const low = rest.match(new RegExp(`${EDGE}(?:!thấp|!thap)${END}`, "iu"));
-  const normal = rest.match(new RegExp(`${EDGE}(?:!thường|!thuong)${END}`, "iu"));
+  const high = rest.match(new RegExp(`${EDGE}(?:!!|!cao|!gấp|!high|!urgent)${END}`, "iu"));
+  const low = rest.match(new RegExp(`${EDGE}(?:!thấp|!thap|!low)${END}`, "iu"));
+  const normal = rest.match(new RegExp(`${EDGE}(?:!thường|!thuong|!normal)${END}`, "iu"));
   for (const [match, value] of [[high, "high"], [low, "low"], [normal, "normal"]] as const) {
     if (!match) continue;
     priority = value;
@@ -123,8 +127,8 @@ export function parseQuickAdd(raw: string, today: string): TodoFields {
 export function dueLabel(due: string, today: string): { text: string; tone: DueTone } {
   const diff = dayNumber(due) - dayNumber(today);
   const short = `${due.slice(8, 10)}/${due.slice(5, 7)}`;
-  if (diff < 0) return { text: `Quá hạn ${-diff} ngày`, tone: "overdue" };
-  if (diff === 0) return { text: "Hôm nay", tone: "today" };
+  if (diff < 0) return { text: L("Quá hạn {0} ngày", -diff), tone: "overdue" };
+  if (diff === 0) return { text: L("Hôm nay"), tone: "today" };
   if (diff === 1) return { text: "Mai", tone: "soon" };
   if (diff < 7) return { text: `${WEEKDAYS[new Date(`${due}T00:00:00Z`).getUTCDay()]} ${short}`, tone: "later" };
   return { text: due.slice(0, 4) === today.slice(0, 4) ? short : `${short}/${due.slice(0, 4)}`, tone: "later" };

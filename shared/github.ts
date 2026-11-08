@@ -1,3 +1,4 @@
+import { L } from "./i18n.ts";
 export type GitKind = "ci" | "pr" | "issue" | "security" | "notification";
 export type GitAction = "rerun" | "merge" | "close" | "read";
 export type GitSeverity = "error" | "warning" | "info";
@@ -39,26 +40,26 @@ export interface RepoUsage {
   pushedAt: string | null;
 }
 
-export const EMPTY_GITHUB: GitHubSnapshot = { connected: false, note: "Đang đọc GitHub", login: "", fetchedAt: null, repos: 0, items: [] };
+export const EMPTY_GITHUB: GitHubSnapshot = { connected: false, note: L("Đang đọc GitHub"), login: "", fetchedAt: null, repos: 0, items: [] };
 
-export const GIT_GROUPS: [GitKind, string][] = [["ci", "CI lỗi"], ["pr", "Pull request"], ["issue", "Issue"], ["security", "Bảo mật"], ["notification", "Thông báo chưa đọc"]];
+export const GIT_GROUPS: [GitKind, string][] = [["ci", L("CI lỗi")], ["pr", "Pull request"], ["issue", "Issue"], ["security", L("Bảo mật")], ["notification", L("Thông báo chưa đọc")]];
 
 export const ACTION_LABELS: Record<GitAction, { label: string; confirm: string; done: string }> = {
-  rerun: { label: "Chạy lại job lỗi", confirm: "Chạy lại các job lỗi?", done: "Đã yêu cầu GitHub chạy lại các job lỗi." },
-  merge: { label: "Merge (squash)", confirm: "Merge và xoá nhánh?", done: "Đã merge pull request và xoá nhánh." },
-  close: { label: "Đóng issue", confirm: "Đóng issue này?", done: "Đã đóng issue." },
-  read: { label: "Đánh dấu đã đọc", confirm: "Đánh dấu đã đọc?", done: "Đã đánh dấu thông báo là đã đọc." },
+  rerun: { label: L("Chạy lại job lỗi"), confirm: L("Chạy lại các job lỗi?"), done: L("Đã yêu cầu GitHub chạy lại các job lỗi.") },
+  merge: { label: "Merge (squash)", confirm: L("Merge và xoá nhánh?"), done: L("Đã merge pull request và xoá nhánh.") },
+  close: { label: L("Đóng issue"), confirm: L("Đóng issue này?"), done: L("Đã đóng issue.") },
+  read: { label: L("Đánh dấu đã đọc"), confirm: L("Đánh dấu đã đọc?"), done: L("Đã đánh dấu thông báo là đã đọc.") },
 };
 
 const FAILED_CHECK = /^(FAILURE|TIMED_OUT|STARTUP_FAILURE|ACTION_REQUIRED|ERROR)$/;
 const SEVERITY_ORDER = ["CRITICAL", "HIGH", "MODERATE", "LOW"];
-const SEVERITY_NAMES: Record<string, string> = { CRITICAL: "nghiêm trọng", HIGH: "cao", MODERATE: "trung bình", LOW: "thấp" };
+const SEVERITY_NAMES: Record<string, string> = { CRITICAL: L("nghiêm trọng"), HIGH: "cao", MODERATE: L("trung bình"), LOW: L("thấp") };
 const REASONS: Record<string, string> = {
-  assign: "Được giao", author: "Sếp tạo", comment: "Có bình luận", ci_activity: "Hoạt động CI", invitation: "Lời mời", manual: "Đang theo dõi",
-  mention: "Nhắc tới sếp", review_requested: "Cần review", security_alert: "Cảnh báo bảo mật", state_change: "Đổi trạng thái", subscribed: "Đang theo dõi",
-  team_mention: "Nhắc tới nhóm", approval_requested: "Cần duyệt", member_feature_requested: "Yêu cầu tính năng", security_advisory_credit: "Ghi công bảo mật",
+  assign: L("Được giao"), author: L("Sếp tạo"), comment: L("Có bình luận"), ci_activity: L("Hoạt động CI"), invitation: L("Lời mời"), manual: L("Đang theo dõi"),
+  mention: L("Nhắc tới sếp"), review_requested: L("Cần review"), security_alert: L("Cảnh báo bảo mật"), state_change: L("Đổi trạng thái"), subscribed: L("Đang theo dõi"),
+  team_mention: L("Nhắc tới nhóm"), approval_requested: L("Cần duyệt"), member_feature_requested: L("Yêu cầu tính năng"), security_advisory_credit: L("Ghi công bảo mật"),
 };
-const SUBJECTS: Record<string, string> = { PullRequest: "Pull request", Issue: "Issue", CheckSuite: "CI", Release: "Bản phát hành", Discussion: "Thảo luận", Commit: "Commit", RepositoryVulnerabilityAlert: "Cảnh báo bảo mật", RepositoryDependabotAlertsThread: "Dependabot" };
+const SUBJECTS: Record<string, string> = { PullRequest: "Pull request", Issue: "Issue", CheckSuite: "CI", Release: L("Bản phát hành"), Discussion: L("Thảo luận"), Commit: "Commit", RepositoryVulnerabilityAlert: L("Cảnh báo bảo mật"), RepositoryDependabotAlertsThread: "Dependabot" };
 
 export interface RawCheck {
   __typename?: string;
@@ -165,7 +166,7 @@ function ciItems(repo: RawRepo): GitItem[] {
     if (!FAILED_CHECK.test(state)) continue;
     const run = check.checkSuite?.workflowRun;
     const key = run?.databaseId ? `run:${run.databaseId}` : `ctx:${check.name ?? check.context}`;
-    const entry = runs.get(key) ?? { workflow: run?.workflow?.name ?? check.context ?? check.name ?? "Kiểm tra", url: run?.url ?? check.detailsUrl ?? check.targetUrl ?? `${repo.url}/actions`, runId: run?.databaseId, jobs: [] };
+    const entry = runs.get(key) ?? { workflow: run?.workflow?.name ?? check.context ?? check.name ?? L("Kiểm tra"), url: run?.url ?? check.detailsUrl ?? check.targetUrl ?? `${repo.url}/actions`, runId: run?.databaseId, jobs: [] };
     entry.jobs.push(check.name ?? check.context ?? "");
     runs.set(key, entry);
   }
@@ -174,12 +175,12 @@ function ciItems(repo: RawRepo): GitItem[] {
     kind: "ci" as const,
     repo: repo.nameWithOwner,
     project: repo.name,
-    title: `${repo.name}: ${run.workflow} lỗi`,
-    detail: [`Nhánh ${branch}`, `Job lỗi: ${run.jobs.filter(Boolean).join(", ")}`],
+    title: L("{0}: {1} lỗi", repo.name, run.workflow),
+    detail: [L("Nhánh {0}", branch), L("Job lỗi: {0}", run.jobs.filter(Boolean).join(", "))],
     url: run.url,
     updatedAt: repo.pushedAt ?? "",
     severity: "error" as const,
-    tags: [{ label: `${run.jobs.length} job lỗi`, tone: "red" as const }],
+    tags: [{ label: L("{0} job lỗi", run.jobs.length), tone: "red" as const }],
     actions: run.runId ? ["rerun" as const] : [],
   }));
 }
@@ -187,16 +188,16 @@ function ciItems(repo: RawRepo): GitItem[] {
 function pullItem(pull: RawPull, repo: string, owned: boolean, viewer: string, extra: GitTag[] = []): GitItem {
   const checks = pull.commits?.nodes?.[0]?.commit?.statusCheckRollup?.state ?? null;
   const tags: GitTag[] = [...extra];
-  if (pull.isDraft) tags.push({ label: "Bản nháp", tone: "gray" });
-  if (pull.reviewDecision === "REVIEW_REQUIRED") tags.push({ label: "Chờ review", tone: "amber" });
-  if (pull.reviewDecision === "APPROVED") tags.push({ label: "Đã duyệt", tone: "green" });
-  if (pull.reviewDecision === "CHANGES_REQUESTED") tags.push({ label: "Cần sửa", tone: "red" });
+  if (pull.isDraft) tags.push({ label: L("Bản nháp"), tone: "gray" });
+  if (pull.reviewDecision === "REVIEW_REQUIRED") tags.push({ label: L("Chờ review"), tone: "amber" });
+  if (pull.reviewDecision === "APPROVED") tags.push({ label: L("Đã duyệt"), tone: "green" });
+  if (pull.reviewDecision === "CHANGES_REQUESTED") tags.push({ label: L("Cần sửa"), tone: "red" });
   if (checks === "SUCCESS") tags.push({ label: "CI xanh", tone: "green" });
-  else if (checks && FAILED_CHECK.test(checks)) tags.push({ label: "CI lỗi", tone: "red" });
-  else if (checks) tags.push({ label: "CI đang chạy", tone: "blue" });
-  if (pull.mergeable === "CONFLICTING") tags.push({ label: "Xung đột", tone: "red" });
+  else if (checks && FAILED_CHECK.test(checks)) tags.push({ label: L("CI lỗi"), tone: "red" });
+  else if (checks) tags.push({ label: L("CI đang chạy"), tone: "blue" });
+  if (pull.mergeable === "CONFLICTING") tags.push({ label: L("Xung đột"), tone: "red" });
   const ready = !pull.isDraft && pull.mergeable === "MERGEABLE" && (checks === null || checks === "SUCCESS") && pull.reviewDecision !== "CHANGES_REQUESTED";
-  if (ready) tags.push({ label: "Sẵn sàng merge", tone: "green" });
+  if (ready) tags.push({ label: L("Sẵn sàng merge"), tone: "green" });
   const author = pull.author?.login ?? "";
   const failing = (checks !== null && FAILED_CHECK.test(checks)) || pull.mergeable === "CONFLICTING";
   return {
@@ -205,7 +206,7 @@ function pullItem(pull: RawPull, repo: string, owned: boolean, viewer: string, e
     repo,
     project: shortName(repo),
     title: pull.title,
-    detail: [`${repo} #${pull.number}${author && author !== viewer ? ` · mở bởi ${author}` : ""}`, ...(pull.headRefName ? [`${pull.headRefName} → ${pull.baseRefName ?? "main"}`] : [])],
+    detail: [`${repo} #${pull.number}${author && author !== viewer ? L(" · mở bởi {0}", author) : ""}`, ...(pull.headRefName ? [`${pull.headRefName} → ${pull.baseRefName ?? "main"}`] : [])],
     url: pull.url,
     updatedAt: pull.updatedAt,
     severity: pull.isDraft ? "info" : failing ? "error" : "warning",
@@ -224,7 +225,7 @@ function issueItem(issue: RawIssue, repo: string, owned: boolean, viewer: string
     repo,
     project: shortName(repo),
     title: issue.title,
-    detail: [`${repo} #${issue.number}${author && author !== viewer ? ` · mở bởi ${author}` : ""}${comments ? ` · ${comments} bình luận` : ""}`],
+    detail: [`${repo} #${issue.number}${author && author !== viewer ? L(" · mở bởi {0}", author) : ""}${comments ? L(" · {0} bình luận", comments) : ""}`],
     url: issue.url,
     updatedAt: issue.updatedAt,
     severity: "warning",
@@ -247,9 +248,9 @@ function securityItem(repo: RawRepo, codeScanning: number): GitItem | null {
   const tags: GitTag[] = SEVERITY_ORDER.filter((level) => bySeverity.get(level)).map((level) => ({ label: `${bySeverity.get(level)} ${SEVERITY_NAMES[level]}`, tone: level === "CRITICAL" || level === "HIGH" ? "red" : level === "MODERATE" ? "amber" : "gray" }));
   if (codeScanning) tags.push({ label: `${codeScanning} code scanning`, tone: "amber" });
   const detail = [
-    ...(total ? [`${total} cảnh báo Dependabot${alerts.length < total ? ` (phân loại theo ${alerts.length} cảnh báo mới nhất)` : ""}`] : []),
-    ...(packages.length ? [`Gói bị ảnh hưởng: ${packages.join(", ")}`] : []),
-    ...(codeScanning ? [`${codeScanning} cảnh báo code scanning`] : []),
+    ...(total ? [L("{0} cảnh báo Dependabot{1}", total, alerts.length < total ? L(" (phân loại theo {0} cảnh báo mới nhất)", alerts.length) : "")] : []),
+    ...(packages.length ? [L("Gói bị ảnh hưởng: {0}", packages.join(", "))] : []),
+    ...(codeScanning ? [L("{0} cảnh báo code scanning", codeScanning)] : []),
   ];
   const latest = alerts.map((alert) => alert.createdAt).sort().at(-1) ?? repo.pushedAt ?? "";
   const severe = bySeverity.get("CRITICAL") || bySeverity.get("HIGH");
@@ -258,7 +259,7 @@ function securityItem(repo: RawRepo, codeScanning: number): GitItem | null {
     kind: "security",
     repo: repo.nameWithOwner,
     project: repo.name,
-    title: `${repo.name}: ${total + codeScanning} cảnh báo bảo mật`,
+    title: L("{0}: {1} cảnh báo bảo mật", repo.name, total + codeScanning),
     detail,
     url: total ? `${repo.url}/security/dependabot` : `${repo.url}/security/code-scanning`,
     updatedAt: latest,
@@ -305,8 +306,8 @@ export function buildGitHub(raw: RawGitHub, notifications: RawNotification[], co
     add(securityItem(repo, codeScanning.get(repo.nameWithOwner) ?? 0));
   }
   const owned = (node: { repository?: { owner?: { login?: string } } }) => node.repository?.owner?.login === viewer;
-  for (const pull of raw.reviews?.nodes ?? []) if (pull.repository) add(pullItem(pull, pull.repository.nameWithOwner, owned(pull), viewer, [{ label: "Nhờ sếp review", tone: "amber" }]));
-  for (const pull of raw.authored?.nodes ?? []) if (pull.repository) add(pullItem(pull, pull.repository.nameWithOwner, owned(pull), viewer, [{ label: "Sếp mở", tone: "blue" }]));
+  for (const pull of raw.reviews?.nodes ?? []) if (pull.repository) add(pullItem(pull, pull.repository.nameWithOwner, owned(pull), viewer, [{ label: L("Nhờ sếp review"), tone: "amber" }]));
+  for (const pull of raw.authored?.nodes ?? []) if (pull.repository) add(pullItem(pull, pull.repository.nameWithOwner, owned(pull), viewer, [{ label: L("Sếp mở"), tone: "blue" }]));
   for (const issue of raw.assigned?.nodes ?? []) if (issue.repository && issue.__typename !== "PullRequest") add(issueItem(issue, issue.repository.nameWithOwner, owned(issue), viewer));
   notifications.forEach((note) => add(notificationItem(note)));
   return { connected: true, note: "", login: viewer, fetchedAt: new Date(now).toISOString(), repos: repos.length, items: items.sort(byTime), usage: repos.map((repo) => ({ repo: repo.nameWithOwner, commits: repo.defaultBranchRef?.target?.history?.totalCount ?? 0, pushedAt: repo.pushedAt ?? null })) };

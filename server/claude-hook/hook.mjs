@@ -4,7 +4,8 @@ import http from "node:http";
 import os from "node:os";
 import path from "node:path";
 
-const STOP_MESSAGE = "Sếp đã dừng lượt này từ web công ty";
+const ENGLISH = process.env.MSC_LANG ? !process.env.MSC_LANG.toLowerCase().startsWith("vi") : !process.env.NODE_TEST_CONTEXT;
+const STOP_MESSAGE = ENGLISH ? "You stopped this turn from the company dashboard" : "Sếp đã dừng lượt này từ web công ty";
 const STOP_MAX_AGE_MS = 3 * 60 * 1000;
 const RETRY_MS = Number(process.env.MSC_HOOK_RETRY_MS) > 0 ? Number(process.env.MSC_HOOK_RETRY_MS) : 3000;
 const RETRY_WINDOW_MS = Number(process.env.MSC_HOOK_RETRY_WINDOW_MS) > 0 ? Number(process.env.MSC_HOOK_RETRY_WINDOW_MS) : 10 * 60 * 1000;

@@ -1,3 +1,4 @@
+import { L } from "../../shared/i18n.ts";
 import { createHash } from "node:crypto";
 import path from "node:path";
 import { REPLY_DESCRIPTION_LIMIT, REPLY_HEADER_LIMIT } from "../../shared/replies.ts";
@@ -12,17 +13,17 @@ type Data = Record<string, unknown>;
 const ACCOUNT = "claude-hook";
 const PLAN_LIMIT = 8000;
 const DETAIL_LIMIT = 4000;
-const ELLIPSIS = "\n… (đã cắt bớt)";
-const PLAN_DEFAULT = "Sếp yêu cầu sửa lại kế hoạch trước khi làm.";
-const DENY_DEFAULT = "Sếp đã từ chối thao tác này từ web công ty.";
-const APPROVAL_LABELS: Record<string, string> = { allow: "Cho phép", "allow-always": "Luôn cho phép (theo gợi ý của Claude)", deny: "Từ chối", "deny-stop": "Từ chối và dừng lượt" };
+const ELLIPSIS = L("\n… (đã cắt bớt)");
+const PLAN_DEFAULT = L("Sếp yêu cầu sửa lại kế hoạch trước khi làm.");
+const DENY_DEFAULT = L("Sếp đã từ chối thao tác này từ web công ty.");
+const APPROVAL_LABELS: Record<string, string> = { allow: L("Cho phép"), "allow-always": L("Luôn cho phép (theo gợi ý của Claude)"), deny: L("Từ chối"), "deny-stop": L("Từ chối và dừng lượt") };
 const FEEDBACK_ID = "feedback";
 const DECISION_ID = "decision";
 
 const data = (value: unknown): Data | null => value !== null && typeof value === "object" && !Array.isArray(value) ? value as Data : null;
 const str = (value: unknown) => typeof value === "string" ? value : "";
 const cut = (value: string, max: number) => value.length > max ? `${value.slice(0, max - ELLIPSIS.length)}${ELLIPSIS}` : value;
-const TRUNCATED_TITLE = " (nội dung quá dài, duyệt trong app)";
+const TRUNCATED_TITLE = L(" (nội dung quá dài, duyệt trong app)");
 const normalizedCwd = (value: string) => /^[a-z]:[\\/]/i.test(value) || value.startsWith("\\\\") ? path.win32.normalize(value).replace(/[\\/]+$/, "").toLowerCase() : path.posix.normalize(value).replace(/\/+$/, "") || "/";
 const version = (entry: ClaudeHookEntry) => createHash("sha256").update(JSON.stringify([entry.toolName, entry.toolInput])).digest("hex");
 const valid = (value: string, max: number) => value.trim().length > 0 && value.length <= max && !value.includes("\0");
@@ -49,7 +50,7 @@ function askQuestions(input: Data): AskQuestion[] | null {
   return result;
 }
 
-const SUGGESTION_TYPES: Record<string, string> = { addRules: "Thêm quy tắc", replaceRules: "Thay quy tắc", removeRules: "Gỡ quy tắc", setMode: "Đổi chế độ", addDirectories: "Thêm thư mục", removeDirectories: "Gỡ thư mục" };
+const SUGGESTION_TYPES: Record<string, string> = { addRules: L("Thêm quy tắc"), replaceRules: L("Thay quy tắc"), removeRules: L("Gỡ quy tắc"), setMode: L("Đổi chế độ"), addDirectories: L("Thêm thư mục"), removeDirectories: L("Gỡ thư mục") };
 
 class Fields {
   readonly lines: string[] = [];
@@ -69,7 +70,7 @@ class Fields {
     if (value) this.lines.push(label);
   }
   take(key: string): unknown { this.used.add(key); return this.input[key]; }
-  rest(prefix = "Trường khác"): string {
+  rest(prefix = L("Trường khác")): string {
     const extra = Object.fromEntries(Object.entries(this.input).filter(([key]) => !this.used.has(key)));
     return Object.keys(extra).length ? `${prefix}: ${JSON.stringify(extra)}` : "";
   }
@@ -79,10 +80,10 @@ function editText(value: unknown, index: number): string {
   const edit = data(value);
   if (!edit) return `[${index + 1}] ${JSON.stringify(value)}`;
   const fields = new Fields(edit);
-  fields.flag("replace_all", "thay tất cả");
+  fields.flag("replace_all", L("thay tất cả"));
   const head = `[${index + 1}]${fields.lines.length ? ` ${fields.lines.pop()}` : ""}`;
   fields.text("old_string", "Thay");
-  fields.text("new_string", "Thành");
+  fields.text("new_string", L("Thành"));
   return [head, ...fields.lines, fields.rest()].filter(Boolean).join("\n");
 }
 
@@ -90,36 +91,36 @@ function toolText(entry: ClaudeHookEntry): string {
   const fields = new Fields(entry.toolInput);
   switch (entry.toolName) {
     case "Bash":
-      fields.flag("dangerouslyDisableSandbox", "⚠ Chạy ngoài sandbox (dangerouslyDisableSandbox)");
-      fields.flag("run_in_background", "Chạy nền");
-      fields.text("command", "Lệnh");
-      fields.text("description", "Mô tả", false);
+      fields.flag("dangerouslyDisableSandbox", L("⚠ Chạy ngoài sandbox (dangerouslyDisableSandbox)"));
+      fields.flag("run_in_background", L("Chạy nền"));
+      fields.text("command", L("Lệnh"));
+      fields.text("description", L("Mô tả"), false);
       break;
     case "Edit":
-      fields.text("file_path", "Tệp");
-      fields.flag("replace_all", "Thay tất cả chỗ trùng");
+      fields.text("file_path", L("Tệp"));
+      fields.flag("replace_all", L("Thay tất cả chỗ trùng"));
       fields.text("old_string", "Thay");
-      fields.text("new_string", "Thành");
+      fields.text("new_string", L("Thành"));
       break;
     case "MultiEdit": {
-      fields.text("file_path", "Tệp");
+      fields.text("file_path", L("Tệp"));
       const edits = entry.toolInput.edits;
-      if (Array.isArray(edits)) { fields.take("edits"); fields.lines.push(`Số chỗ sửa: ${edits.length}`, ...edits.map(editText)); }
+      if (Array.isArray(edits)) { fields.take("edits"); fields.lines.push(L("Số chỗ sửa: {0}", edits.length), ...edits.map(editText)); }
       break;
     }
     case "Write":
-      fields.text("file_path", "Tệp");
-      fields.text("content", "Nội dung");
+      fields.text("file_path", L("Tệp"));
+      fields.text("content", L("Nội dung"));
       break;
     case "NotebookEdit":
       fields.text("notebook_path", "Notebook");
-      fields.text("cell_id", "Ô", false);
-      fields.text("edit_mode", "Kiểu sửa", false);
-      fields.text("new_source", "Nội dung");
+      fields.text("cell_id", L("Ô"), false);
+      fields.text("edit_mode", L("Kiểu sửa"), false);
+      fields.text("new_source", L("Nội dung"));
       break;
     case "WebFetch":
-      fields.text("url", "Địa chỉ");
-      fields.text("prompt", "Yêu cầu", false);
+      fields.text("url", L("Địa chỉ"));
+      fields.text("prompt", L("Yêu cầu"), false);
       break;
     default: return JSON.stringify(entry.toolInput);
   }
@@ -131,23 +132,23 @@ function suggestionText(value: unknown): string {
   if (!suggestion) return `• ${JSON.stringify(value)}`;
   const fields = new Fields(suggestion);
   const type = fields.take("type");
-  const parts = [typeof type === "string" ? `${SUGGESTION_TYPES[type] ?? type} (${type})` : `Kiểu: ${JSON.stringify(type ?? null)}`];
+  const parts = [typeof type === "string" ? `${SUGGESTION_TYPES[type] ?? type} (${type})` : L("Kiểu: {0}", JSON.stringify(type ?? null))];
   const behavior = suggestion.behavior;
-  if (typeof behavior === "string") { fields.take("behavior"); parts.push(`hành vi: ${behavior}`); }
+  if (typeof behavior === "string") { fields.take("behavior"); parts.push(L("hành vi: {0}", behavior)); }
   const rules = suggestion.rules;
-  if (Array.isArray(rules)) { fields.take("rules"); parts.push(`quy tắc: ${rules.map((rule) => { const item = data(rule); return item && typeof item.toolName === "string" && Object.keys(item).every((key) => key === "toolName" || (key === "ruleContent" && typeof item.ruleContent === "string")) ? `${item.toolName}${typeof item.ruleContent === "string" ? `(${item.ruleContent})` : ""}` : JSON.stringify(rule); }).join(", ") || "(không có)"}`); }
-  if (typeof suggestion.mode === "string") { fields.take("mode"); parts.push(`chế độ: ${suggestion.mode}`); }
+  if (Array.isArray(rules)) { fields.take("rules"); parts.push(L("quy tắc: {0}", rules.map((rule) => { const item = data(rule); return item && typeof item.toolName === "string" && Object.keys(item).every((key) => key === "toolName" || (key === "ruleContent" && typeof item.ruleContent === "string")) ? `${item.toolName}${typeof item.ruleContent === "string" ? `(${item.ruleContent})` : ""}` : JSON.stringify(rule); }).join(", ") || L("(không có)"))); }
+  if (typeof suggestion.mode === "string") { fields.take("mode"); parts.push(L("chế độ: {0}", suggestion.mode)); }
   const directories = suggestion.directories;
-  if (Array.isArray(directories)) { fields.take("directories"); parts.push(`thư mục: ${directories.map((directory) => typeof directory === "string" ? directory : JSON.stringify(directory)).join(", ") || "(không có)"}`); }
-  if (typeof suggestion.destination === "string") { fields.take("destination"); parts.push(`lưu vào: ${suggestion.destination}`); }
-  const rest = fields.rest("khác");
+  if (Array.isArray(directories)) { fields.take("directories"); parts.push(L("thư mục: {0}", directories.map((directory) => typeof directory === "string" ? directory : JSON.stringify(directory)).join(", ") || L("(không có)"))); }
+  if (typeof suggestion.destination === "string") { fields.take("destination"); parts.push(L("lưu vào: {0}", suggestion.destination)); }
+  const rest = fields.rest(L("khác"));
   return `• ${[...parts, rest].filter(Boolean).join(" · ")}`;
 }
 
 function fullApprovalText(entry: ClaudeHookEntry): string {
   const tool = toolText(entry);
   if (!Array.isArray(entry.suggestions) || !entry.suggestions.length) return tool;
-  return `${tool}\n\nNếu chọn Luôn cho phép:\n${entry.suggestions.map(suggestionText).join("\n")}`;
+  return L("{0}\n\nNếu chọn Luôn cho phép:\n{1}", tool, entry.suggestions.map(suggestionText).join("\n"));
 }
 
 function approvalDetail(entry: ClaudeHookEntry): { text: string; truncated: boolean } {
@@ -165,15 +166,15 @@ function toQuestion(entry: ClaudeHookEntry, agent: AgentInfo, machine: MachineId
     const questions = askQuestions(entry.toolInput);
     if (!questions) return null;
     const detail = questions.map((question) => [question.header && `[${question.header}]`, question.text, ...question.options.map((option, index) => `• ${option}${question.descriptions[index] ? `: ${question.descriptions[index]}` : ""}`)].filter(Boolean).join("\n")).join("\n\n");
-    return { ...base, kind: "question", title: "Claude hỏi sếp", detail: cut(detail, DETAIL_LIMIT), fields: questions.map((question, position) => {
+    return { ...base, kind: "question", title: L("Claude hỏi sếp"), detail: cut(detail, DETAIL_LIMIT), fields: questions.map((question, position) => {
       const descriptions = question.options.map((option, index) => [option, question.descriptions[index].slice(0, REPLY_DESCRIPTION_LIMIT)]).filter(([, description]) => description);
       return { id: fieldId(question.text, position), text: question.text, options: question.options, multiSelect: question.multiSelect, allowFreeText: true, ...(descriptions.length ? { descriptions: Object.fromEntries(descriptions) } : {}), ...(question.header ? { header: question.header.slice(0, REPLY_HEADER_LIMIT) } : {}) };
     }) };
   }
-  if (entry.toolName === "ExitPlanMode") return { ...base, kind: "plan", title: "Claude xin duyệt kế hoạch", detail: cut(str(entry.toolInput.plan), PLAN_LIMIT), fields: [{ id: DECISION_ID, text: "Kế hoạch chỉ duyệt được trong app; từ web sếp có thể yêu cầu Claude sửa lại", options: ["revise"], labels: { revise: "Yêu cầu sửa kế hoạch" }, multiSelect: false, allowFreeText: false }, feedbackField("Góp ý cho Claude (không bắt buộc)")] };
+  if (entry.toolName === "ExitPlanMode") return { ...base, kind: "plan", title: L("Claude xin duyệt kế hoạch"), detail: cut(str(entry.toolInput.plan), PLAN_LIMIT), fields: [{ id: DECISION_ID, text: L("Kế hoạch chỉ duyệt được trong app; từ web sếp có thể yêu cầu Claude sửa lại"), options: ["revise"], labels: { revise: L("Yêu cầu sửa kế hoạch") }, multiSelect: false, allowFreeText: false }, feedbackField(L("Góp ý cho Claude (không bắt buộc)"))] };
   const detail = approvalDetail(entry);
   const options = [...(detail.truncated ? [] : ["allow", ...(Array.isArray(entry.suggestions) && entry.suggestions.length ? ["allow-always"] : [])]), "deny", "deny-stop"];
-  return { ...base, kind: "approval", title: `Claude xin quyền dùng ${entry.toolName}${detail.truncated ? TRUNCATED_TITLE : ""}`, detail: detail.text, fields: [{ id: DECISION_ID, text: "Quyết định của sếp", options, labels: Object.fromEntries(options.map((option) => [option, APPROVAL_LABELS[option]])), multiSelect: false, allowFreeText: false }, feedbackField("Lời nhắn cho Claude khi từ chối (không bắt buộc)")] };
+  return { ...base, kind: "approval", title: L("Claude xin quyền dùng {0}{1}", entry.toolName, detail.truncated ? TRUNCATED_TITLE : ""), detail: detail.text, fields: [{ id: DECISION_ID, text: L("Quyết định của sếp"), options, labels: Object.fromEntries(options.map((option) => [option, APPROVAL_LABELS[option]])), multiSelect: false, allowFreeText: false }, feedbackField(L("Lời nhắn cho Claude khi từ chối (không bắt buộc)"))] };
 }
 
 function fits(fields: ReplyField[], answers: Record<string, string[]>): boolean {

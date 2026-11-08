@@ -1,3 +1,4 @@
+import { L } from "../shared/i18n.ts";
 import { createHash } from "node:crypto";
 import { mkdirSync } from "node:fs";
 import os from "node:os";
@@ -24,7 +25,7 @@ const MACHINES = ["WORKSTATION", "SERVER", "LAPTOP"];
 
 export function validateDispatch(value: unknown): DispatchSubmission {
   const body = value as DispatchSubmission;
-  if (!body || typeof body !== "object" || !DISPATCH_ID.test(body.requestId) || typeof body.targetAgentId !== "string" || !body.targetAgentId || body.targetAgentId.length > 300 || !MACHINES.includes(body.targetMachine) || typeof body.message !== "string" || !body.message.trim() || body.message.length > 16000 || body.message.includes("\0")) throw new DispatchError(400, "Nội dung hoặc đích gửi không hợp lệ");
+  if (!body || typeof body !== "object" || !DISPATCH_ID.test(body.requestId) || typeof body.targetAgentId !== "string" || !body.targetAgentId || body.targetAgentId.length > 300 || !MACHINES.includes(body.targetMachine) || typeof body.message !== "string" || !body.message.trim() || body.message.length > 16000 || body.message.includes("\0")) throw new DispatchError(400, L("Nội dung hoặc đích gửi không hợp lệ"));
   return { requestId: body.requestId.toLowerCase(), targetAgentId: body.targetAgentId, targetMachine: body.targetMachine, message: body.message.trim() };
 }
 
@@ -39,7 +40,7 @@ export class DispatchBroker {
     this.db.exec("PRAGMA journal_mode=WAL; PRAGMA busy_timeout=5000; CREATE TABLE IF NOT EXISTS communications (id TEXT PRIMARY KEY, digest TEXT NOT NULL, receipt TEXT NOT NULL)");
     for (const row of this.db.prepare("SELECT receipt FROM communications").all()) {
       const receipt = JSON.parse(String(row.receipt)) as DispatchReceipt;
-      if (receipt.status === "sending" || receipt.status === "queued") this.update(receipt.id, { status: "unknown", detail: "Dịch vụ đã khởi động lại; chưa xác nhận kết quả, không tự gửi lại" });
+      if (receipt.status === "sending" || receipt.status === "queued") this.update(receipt.id, { status: "unknown", detail: L("Dịch vụ đã khởi động lại; chưa xác nhận kết quả, không tự gửi lại") });
     }
   }
   close(): void { this.db.close(); }
@@ -69,7 +70,7 @@ export class DispatchBroker {
   }
   async targets(agents: AgentInfo[]): Promise<DispatchTarget[]> {
     return Promise.all(agents.filter(agent => !agent.parentId).slice(0, 128).map(async agent => {
-      let availability = { available: false, reason: "Chưa xác minh được ứng dụng đích" };
+      let availability = { available: false, reason: L("Chưa xác minh được ứng dụng đích") };
       try { availability = await this.bounded(() => this.options.adapter.inspect(agent)); } catch {}
       return { agentId: agent.id, app: agent.app, machine: agent.machine, title: agent.title, project: agent.project, ...availability };
     }));
@@ -92,14 +93,14 @@ export class DispatchBroker {
     const digest = createHash("sha256").update(JSON.stringify(body)).digest("hex");
     const existing = this.db.prepare("SELECT digest, receipt FROM communications WHERE id=?").get(body.requestId);
     if (existing) {
-      if (existing.digest !== digest) throw new DispatchError(409, "Mã gửi đã được dùng cho nội dung khác");
+      if (existing.digest !== digest) throw new DispatchError(409, L("Mã gửi đã được dùng cho nội dung khác"));
       return JSON.parse(String(existing.receipt));
     }
     const matches = agents.filter(agent => agent.id === body.targetAgentId && agent.machine === body.targetMachine && !agent.parentId);
-    if (matches.length !== 1 || !matches[0].sessionId || !matches[0].cwd) throw new DispatchError(409, "Không xác minh được đúng phiên đích; chưa gửi");
+    if (matches.length !== 1 || !matches[0].sessionId || !matches[0].cwd) throw new DispatchError(409, L("Không xác minh được đúng phiên đích; chưa gửi"));
     const agent = matches[0];
     const at = new Date().toISOString();
-    const receipt: DispatchReceipt = { id: body.requestId, targetAgentId: agent.id, targetMachine: agent.machine, summary: messageSummary(body.message), status: "sending", at, updatedAt: at, detail: "Đang xác minh và gửi yêu cầu", author: "human-web" };
+    const receipt: DispatchReceipt = { id: body.requestId, targetAgentId: agent.id, targetMachine: agent.machine, summary: messageSummary(body.message), status: "sending", at, updatedAt: at, detail: L("Đang xác minh và gửi yêu cầu"), author: "human-web" };
     this.db.prepare("INSERT INTO communications (id,digest,receipt) VALUES (?,?,?)").run(receipt.id, digest, JSON.stringify(receipt));
     this.notify();
     try {
@@ -110,13 +111,13 @@ export class DispatchBroker {
       }
       let capability;
       try { capability = await this.bounded(() => this.options.adapter.inspect(agent)); }
-      catch { return this.update(receipt.id, { status: "failed", detail: "Không xác minh được ứng dụng đích trong thời gian cho phép; chưa gửi" }); }
+      catch { return this.update(receipt.id, { status: "failed", detail: L("Không xác minh được ứng dụng đích trong thời gian cho phép; chưa gửi") }); }
       if (!capability.available) return this.update(receipt.id, { status: "failed", detail: capability.reason });
       const result = await this.bounded(() => this.options.adapter.send(agent, `[Human via AI Agent Company · ${body.requestId}]\n${body.message}`, body.requestId));
       return this.update(receipt.id, result);
     } catch (error) {
       const unsent = (error as { sent?: boolean })?.sent === false;
-      return this.update(receipt.id, { status: unsent ? "failed" : "unknown", detail: unsent ? (error as { reason?: string }).reason ?? "Ứng dụng từ chối trước khi gửi; chưa chuyển nội dung" : "Chưa xác nhận được kết quả; không tự gửi lại, kiểm tra chat đích" });
+      return this.update(receipt.id, { status: unsent ? "failed" : "unknown", detail: unsent ? (error as { reason?: string }).reason ?? L("Ứng dụng từ chối trước khi gửi; chưa chuyển nội dung") : L("Chưa xác nhận được kết quả; không tự gửi lại, kiểm tra chat đích") });
     }
   }
 }

@@ -1,3 +1,4 @@
+import { L } from "../../shared/i18n.ts";
 import { DatabaseSync } from "node:sqlite";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import os from "node:os";
@@ -104,18 +105,18 @@ export function readAntigravity(machine: MachineId): AgentInfo[] {
     return rows
       .filter((r) => !r.killed)
       .map((r) => {
-        const title = clip(r.title || r.agent_name || r.preview || "Hội thoại Antigravity", 80);
+        const title = clip(r.title || r.agent_name || r.preview || L("Hội thoại Antigravity"), 80);
         const state = toState(r.status);
         const rawAt = r.last_modified_time.replace(" ", "T").replace(/(\.\d{3})\d+/, "$1");
         const at = new Date(/[zZ]$|[+-]\d{2}:?\d{2}$/.test(rawAt) ? rawAt : `${rawAt}Z`).toISOString();
         const cwd = workspace(r.workspace_uris);
         const tokens = r.status.toUpperCase().split("_");
         const outcome: AgentInfo["outcome"] = tokens.some((token) => ["FAILED", "ERROR"].includes(token))
-          ? { status: "failed", at, summary: "Ứng dụng ghi nhận lỗi", verified: false }
+          ? { status: "failed", at, summary: L("Ứng dụng ghi nhận lỗi"), verified: false }
           : tokens.some((token) => ["CANCELLED", "CANCELED", "STOPPED"].includes(token))
-            ? { status: "aborted", at, summary: "Ứng dụng ghi nhận lượt bị dừng", verified: false }
+            ? { status: "aborted", at, summary: L("Ứng dụng ghi nhận lượt bị dừng"), verified: false }
             : tokens.some((token) => ["COMPLETED", "COMPLETE", "DONE"].includes(token))
-              ? { status: "completed", at, summary: "Ứng dụng ghi nhận kết thúc lượt; chưa xác minh kết quả công việc", verified: false }
+              ? { status: "completed", at, summary: L("Ứng dụng ghi nhận kết thúc lượt; chưa xác minh kết quả công việc"), verified: false }
               : undefined;
         const id = `antigravity:${machine}:${r.conversation_id}`;
         return {
@@ -130,7 +131,7 @@ export function readAntigravity(machine: MachineId): AgentInfo[] {
           project: projectName(workspace(r.workspace_uris)),
           role: classifyRole(`${r.title} ${r.preview}`, []),
           state,
-          detail: state === "working" ? "Đang chạy" : clip(r.preview, 90),
+          detail: state === "working" ? L("Đang chạy") : clip(r.preview, 90),
           parentId: r.parent_conversation_id ? `antigravity:${machine}:${r.parent_conversation_id}` : null,
           updatedAt: at,
           pending: null,

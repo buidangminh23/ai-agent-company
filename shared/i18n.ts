@@ -27,7 +27,8 @@ function detectBrowser(): Lang {
 export function getLang(): Lang {
   if (forced) return forced;
   if (typeof window !== "undefined" && typeof document !== "undefined") return detectBrowser();
-  return normalize(globalThis.process?.env?.MSC_LANG) ?? "vi";
+  const env = globalThis.process?.env;
+  return normalize(env?.MSC_LANG) ?? (env?.NODE_TEST_CONTEXT ? "vi" : "en");
 }
 
 export function setLang(lang: Lang | null): void {

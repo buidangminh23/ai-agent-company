@@ -1,3 +1,4 @@
+import { L } from "../../shared/i18n.ts";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -26,7 +27,7 @@ const VIDEO_PARTS = "snippet,contentDetails,statistics";
 const PLAYLIST_ID = /^[A-Za-z0-9_-]{2,64}$/;
 const CHANNEL_ID = /^UC[A-Za-z0-9_-]{22}$/;
 const CATEGORY_ID = /^\d{1,3}$/;
-const QUOTA_NOTE = "Hết hạn mức API YouTube hôm nay. Google đặt lại lúc 0 giờ giờ Thái Bình Dương (14–15 giờ Việt Nam).";
+const QUOTA_NOTE = L("Hết hạn mức API YouTube hôm nay. Google đặt lại lúc 0 giờ giờ Thái Bình Dương (14–15 giờ Việt Nam).");
 
 export class YouTubeError extends Error {
   readonly status: number;
@@ -137,14 +138,14 @@ export class YouTubeAccount {
   status(): YtStatus {
     const configured = Boolean(this.config.clientId && this.config.clientSecret);
     const pending = this.pending && this.pending.expiresAt > this.now() ? this.pending.code : null;
-    const note = !configured ? "Hub chưa có client OAuth YouTube. Chạy scripts/setup-youtube.ps1 để cài." : this.note;
+    const note = !configured ? L("Hub chưa có client OAuth YouTube. Chạy scripts/setup-youtube.ps1 để cài.") : this.note;
     return { configured, connected: Boolean(this.session), account: this.session?.account ?? null, pending, note };
   }
 
   async startDeviceFlow(): Promise<YtStatus> {
-    if (!this.config.clientId || !this.config.clientSecret) throw new YouTubeError(409, "Hub chưa có client OAuth YouTube.");
+    if (!this.config.clientId || !this.config.clientSecret) throw new YouTubeError(409, L("Hub chưa có client OAuth YouTube."));
     const body = await this.post(DEVICE_URL, { client_id: this.config.clientId, scope: SCOPE });
-    if (!body.device_code || !body.user_code) throw new YouTubeError(502, `Google không cấp mã đăng nhập: ${body.error_description ?? body.error ?? "không rõ lỗi"}`);
+    if (!body.device_code || !body.user_code) throw new YouTubeError(502, L("Google không cấp mã đăng nhập: {0}", body.error_description ?? body.error ?? L("không rõ lỗi")));
     const expiresAt = this.now() + Number(body.expires_in ?? 1800) * 1000;
     this.pending = {
       deviceCode: String(body.device_code),
@@ -167,7 +168,7 @@ export class YouTubeAccount {
     const pending = this.pending;
     if (!pending) return;
     if (pending.expiresAt <= this.now()) {
-      this.note = "Mã đăng nhập đã hết hạn, bấm kết nối lại.";
+      this.note = L("Mã đăng nhập đã hết hạn, bấm kết nối lại.");
       return this.cancelDeviceFlow();
     }
     const body = await this.post(TOKEN_URL, { client_id: this.config.clientId, client_secret: this.config.clientSecret, device_code: pending.deviceCode, grant_type: DEVICE_GRANT });
@@ -178,7 +179,7 @@ export class YouTubeAccount {
     }
     this.cancelDeviceFlow();
     if (!body.access_token || !body.refresh_token) {
-      this.note = body.error === "access_denied" ? "Sếp đã từ chối quyền truy cập YouTube." : `Đăng nhập YouTube không thành công: ${body.error_description ?? body.error ?? "không rõ lỗi"}`;
+      this.note = body.error === "access_denied" ? L("Sếp đã từ chối quyền truy cập YouTube.") : L("Đăng nhập YouTube không thành công: {0}", body.error_description ?? body.error ?? L("không rõ lỗi"));
       return;
     }
     this.save({ refreshToken: String(body.refresh_token), accessToken: String(body.access_token), expiresAt: this.now() + Number(body.expires_in ?? 3600) * 1000, account: null });
@@ -193,7 +194,7 @@ export class YouTubeAccount {
   }
 
   async feed(kind: YtFeedKind, arg = ""): Promise<YtFeedResult> {
-    if (!this.session) throw new YouTubeError(401, "Chưa kết nối tài khoản YouTube.");
+    if (!this.session) throw new YouTubeError(401, L("Chưa kết nối tài khoản YouTube."));
     const key = `${kind}:${arg}`;
     const hit = this.cache.get(key);
     if (hit && this.now() - hit.at < TTL[kind]) return hit.value;
@@ -223,52 +224,52 @@ export class YouTubeAccount {
 
   private async home(): Promise<YtFeedResult> {
     const channels = (await this.feed("subscriptions")).channels.slice(0, HOME_CHANNELS);
-    if (!channels.length) return { ...(await this.feed("trending")), kind: "home", title: "Trang chủ", note: "Tài khoản chưa đăng ký kênh nào, đang hiện video thịnh hành." };
+    if (!channels.length) return { ...(await this.feed("trending")), kind: "home", title: L("Trang chủ"), note: L("Tài khoản chưa đăng ký kênh nào, đang hiện video thịnh hành.") };
     const feeds = await mapLimit(channels, RSS_CONCURRENCY, (channel) => fetchChannelRss(channel.id, this.fetchImpl));
     const latest = feeds.flatMap((result) => (result.status === "fulfilled" ? result.value.videos : []));
     latest.sort((a, b) => Date.parse(b.published || "0") - Date.parse(a.published || "0"));
     const failed = feeds.filter((result) => result.status === "rejected").length;
     const videos = await this.details(latest.slice(0, HOME_SIZE).map((video) => video.id));
-    return { ...emptyResult("home", "Trang chủ", failed ? `${failed} kênh chưa đọc được video mới.` : ""), videos, channels };
+    return { ...emptyResult("home", L("Trang chủ"), failed ? L("{0} kênh chưa đọc được video mới.", failed) : ""), videos, channels };
   }
 
   private async trending(category: string): Promise<YtFeedResult> {
-    if (category && !CATEGORY_ID.test(category)) throw new YouTubeError(400, "Mã thể loại không hợp lệ.");
+    if (category && !CATEGORY_ID.test(category)) throw new YouTubeError(400, L("Mã thể loại không hợp lệ."));
     const body = await this.api("videos", { part: VIDEO_PARTS, chart: "mostPopular", regionCode: this.config.region, maxResults: PAGE, ...(category && category !== "0" ? { videoCategoryId: category } : {}) });
     const videos = (body.items ?? []).map(toVideo);
     await this.fillAvatars(videos);
-    return { ...emptyResult("trending", "Thịnh hành"), videos };
+    return { ...emptyResult("trending", L("Thịnh hành")), videos };
   }
 
   private async search(query: string): Promise<YtFeedResult> {
     const q = query.trim();
-    if (!q || q.length > 200) throw new YouTubeError(400, "Nhập từ khoá tìm kiếm (tối đa 200 ký tự).");
+    if (!q || q.length > 200) throw new YouTubeError(400, L("Nhập từ khoá tìm kiếm (tối đa 200 ký tự)."));
     const body = await this.api("search", { part: "id", type: "video", q, maxResults: SEARCH_SIZE, regionCode: this.config.region, relevanceLanguage: "vi" });
     const ids = (body.items ?? []).map((item: Json) => item.id?.videoId).filter(Boolean);
-    return { ...emptyResult("search", `Kết quả cho “${q}”`), videos: await this.details(ids) };
+    return { ...emptyResult("search", L("Kết quả cho “{0}”", q)), videos: await this.details(ids) };
   }
 
   private async liked(): Promise<YtFeedResult> {
     const body = await this.api("videos", { part: VIDEO_PARTS, myRating: "like", maxResults: PAGE });
     const videos = (body.items ?? []).map(toVideo);
     await this.fillAvatars(videos);
-    return { ...emptyResult("liked", "Video đã thích"), videos };
+    return { ...emptyResult("liked", L("Video đã thích")), videos };
   }
 
   private async playlists(): Promise<YtFeedResult> {
     const body = await this.api("playlists", { part: "snippet,contentDetails", mine: "true", maxResults: PAGE });
     const playlists: YtPlaylist[] = (body.items ?? []).map((item: Json) => ({ id: String(item.id), title: String(item.snippet?.title ?? ""), thumbnail: thumb(item.snippet?.thumbnails), count: Number(item.contentDetails?.itemCount ?? 0) }));
-    return { ...emptyResult("playlists", "Danh sách phát", playlists.length ? "" : "Tài khoản chưa có danh sách phát nào."), playlists };
+    return { ...emptyResult("playlists", L("Danh sách phát"), playlists.length ? "" : L("Tài khoản chưa có danh sách phát nào.")), playlists };
   }
 
   private async playlist(id: string): Promise<YtFeedResult> {
-    if (!PLAYLIST_ID.test(id)) throw new YouTubeError(400, "Mã danh sách phát không hợp lệ.");
+    if (!PLAYLIST_ID.test(id)) throw new YouTubeError(400, L("Mã danh sách phát không hợp lệ."));
     const [items, meta] = await Promise.all([
       this.api("playlistItems", { part: "contentDetails", playlistId: id, maxResults: PAGE }),
       this.api("playlists", { part: "snippet", id }),
     ]);
     const ids = (items.items ?? []).map((item: Json) => item.contentDetails?.videoId).filter(Boolean);
-    return { ...emptyResult("playlist", String(meta.items?.[0]?.snippet?.title ?? "Danh sách phát")), videos: await this.details(ids) };
+    return { ...emptyResult("playlist", String(meta.items?.[0]?.snippet?.title ?? L("Danh sách phát"))), videos: await this.details(ids) };
   }
 
   private async subscriptionsFeed(): Promise<YtFeedResult> {
@@ -284,14 +285,14 @@ export class YouTubeAccount {
       if (!pageToken) break;
     }
     for (const channel of channels) this.rememberAvatar(channel.id, channel.thumbnail);
-    return { ...emptyResult("subscriptions", "Kênh đăng ký"), channels };
+    return { ...emptyResult("subscriptions", L("Kênh đăng ký")), channels };
   }
 
   private async channel(id: string): Promise<YtFeedResult> {
-    if (!CHANNEL_ID.test(id)) throw new YouTubeError(400, "Mã kênh không hợp lệ.");
+    if (!CHANNEL_ID.test(id)) throw new YouTubeError(400, L("Mã kênh không hợp lệ."));
     const body = await this.api("channels", { part: "snippet,contentDetails", id });
     const channel = body.items?.[0];
-    if (!channel) throw new YouTubeError(404, "Không tìm thấy kênh.");
+    if (!channel) throw new YouTubeError(404, L("Không tìm thấy kênh."));
     const uploads = channel.contentDetails?.relatedPlaylists?.uploads;
     const items = uploads ? await this.api("playlistItems", { part: "contentDetails", playlistId: uploads, maxResults: PAGE }) : { items: [] };
     const ids = (items.items ?? []).map((item: Json) => item.contentDetails?.videoId).filter(Boolean);
@@ -337,15 +338,15 @@ export class YouTubeAccount {
     const reason = body.error?.errors?.[0]?.reason;
     if (reason === "quotaExceeded" || reason === "dailyLimitExceeded") throw new YouTubeError(429, QUOTA_NOTE);
     if (res.status === 401) {
-      this.clear("Phiên YouTube không còn hợp lệ, kết nối lại.");
+      this.clear(L("Phiên YouTube không còn hợp lệ, kết nối lại."));
       throw new YouTubeError(401, this.note);
     }
-    throw new YouTubeError(res.status === 404 ? 404 : 502, `YouTube báo lỗi: ${body.error?.message ?? `HTTP ${res.status}`}`);
+    throw new YouTubeError(res.status === 404 ? 404 : 502, L("YouTube báo lỗi: {0}", body.error?.message ?? `HTTP ${res.status}`));
   }
 
   private async accessToken(force: boolean): Promise<string> {
     const session = this.session;
-    if (!session) throw new YouTubeError(401, "Chưa kết nối tài khoản YouTube.");
+    if (!session) throw new YouTubeError(401, L("Chưa kết nối tài khoản YouTube."));
     if (!force && session.expiresAt - REFRESH_MARGIN_MS > this.now()) return session.accessToken;
     this.refreshing ??= this.refresh(session).finally(() => (this.refreshing = null));
     return this.refreshing;
@@ -354,8 +355,8 @@ export class YouTubeAccount {
   private async refresh(session: Session): Promise<string> {
     const body = await this.post(TOKEN_URL, { client_id: this.config.clientId, client_secret: this.config.clientSecret, refresh_token: session.refreshToken, grant_type: "refresh_token" });
     if (!body.access_token) {
-      if (body.error === "invalid_grant") this.clear("Phiên YouTube đã hết hạn hoặc bị thu hồi, kết nối lại.");
-      throw new YouTubeError(401, this.note || `Không làm mới được phiên YouTube: ${body.error ?? "không rõ lỗi"}`);
+      if (body.error === "invalid_grant") this.clear(L("Phiên YouTube đã hết hạn hoặc bị thu hồi, kết nối lại."));
+      throw new YouTubeError(401, this.note || L("Không làm mới được phiên YouTube: {0}", body.error ?? L("không rõ lỗi")));
     }
     this.save({ ...session, accessToken: String(body.access_token), expiresAt: this.now() + Number(body.expires_in ?? 3600) * 1000, refreshToken: String(body.refresh_token ?? session.refreshToken) });
     return String(body.access_token);
@@ -365,7 +366,7 @@ export class YouTubeAccount {
     try {
       const body = await this.api("channels", { part: "snippet", mine: "true" });
       const item = body.items?.[0];
-      const account: YtAccount = item ? { id: String(item.id), title: String(item.snippet?.title ?? ""), thumbnail: thumb(item.snippet?.thumbnails) } : { id: "", title: "Tài khoản Google", thumbnail: "" };
+      const account: YtAccount = item ? { id: String(item.id), title: String(item.snippet?.title ?? ""), thumbnail: thumb(item.snippet?.thumbnails) } : { id: "", title: L("Tài khoản Google"), thumbnail: "" };
       if (this.session) this.save({ ...this.session, account });
     } catch (error) {
       this.note = error instanceof Error ? error.message : String(error);

@@ -1,3 +1,4 @@
+import { L } from "../../shared/i18n.ts";
 import { execFile } from "node:child_process";
 import { existsSync } from "node:fs";
 import { promisify } from "node:util";
@@ -54,6 +55,6 @@ export async function readProjects(): Promise<ProjectsSnapshot> {
     return { connected: true, note: "", repos: nodes.map(toRepo), fetchedAt: new Date().toISOString() };
   } catch (err) {
     const msg = String((err as { stderr?: string }).stderr || (err as Error).message).split("\n")[0];
-    return { connected: false, note: `GitHub CLI lỗi: ${msg.slice(0, 120)}`, repos: [], fetchedAt: null };
+    return { connected: false, note: L("GitHub CLI lỗi: {0}", msg.slice(0, 120)), repos: [], fetchedAt: null };
   }
 }

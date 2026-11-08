@@ -1,3 +1,4 @@
+import { L } from "../../shared/i18n.ts";
 import * as THREE from "three";
 import { CSS2DObject } from "three/examples/jsm/renderers/CSS2DRenderer.js";
 import type { AgentInfo, Snapshot } from "../../shared/types.ts";
@@ -7,7 +8,7 @@ import { STATE_LABELS } from "../agents.ts";
 import { reducedMotion } from "../motion.ts";
 import { CanvasPanel } from "./labels.ts";
 
-const INBOX_EMPTY = '<svg class="office-inbox-icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 8.5l3 3 6-7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Không có việc chờ</span>';
+const INBOX_EMPTY = L("<svg class=\"office-inbox-icon\" viewBox=\"0 0 16 16\" aria-hidden=\"true\"><path d=\"M3.5 8.5l3 3 6-7\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg><span>Không có việc chờ</span>");
 
 interface DeskScreen {
   panel: CanvasPanel;
@@ -45,7 +46,7 @@ export class OperationsScene {
     const controls = document.createElement("div");
     controls.className = "office-controls";
     controls.setAttribute("role", "group");
-    controls.setAttribute("aria-label", "Điều khiển văn phòng");
+    controls.setAttribute("aria-label", L("Điều khiển văn phòng"));
     controls.append(button);
     document.body.append(controls);
   }
@@ -73,9 +74,9 @@ export class OperationsScene {
     const count = ops.attention.length;
     if (this.inbox.dataset.count !== String(count)) {
       this.inbox.dataset.count = String(count);
-      this.inbox.innerHTML = count ? `<span class="office-inbox-count" aria-hidden="true">${count}</span><span>Cần sếp xử lý</span>` : INBOX_EMPTY;
+      this.inbox.innerHTML = count ? L("<span class=\"office-inbox-count\" aria-hidden=\"true\">{0}</span><span>Cần sếp xử lý</span>", count) : INBOX_EMPTY;
     }
-    this.inbox.setAttribute("aria-label", count ? `${count} việc cần sếp xử lý. Mở danh sách` : "Không có việc cần sếp xử lý. Mở danh sách");
+    this.inbox.setAttribute("aria-label", count ? L("{0} việc cần sếp xử lý. Mở danh sách", count) : L("Không có việc cần sếp xử lý. Mở danh sách"));
     const used = new Set<string>();
     for (const agent of snapshot.agents) {
       const desk = this.agents.desk(agent.id);
@@ -111,7 +112,7 @@ export class OperationsScene {
         if (this.warnings.has(id)) continue;
         const label = document.createElement("span");
         label.className = "office-warning";
-        label.textContent = alert.kind === "conflict" ? "Sửa trùng file" : "Lâu chưa cập nhật";
+        label.textContent = alert.kind === "conflict" ? L("Sửa trùng file") : L("Lâu chưa cập nhật");
         label.title = alert.detail;
         const object = new CSS2DObject(label);
         this.root.add(object);

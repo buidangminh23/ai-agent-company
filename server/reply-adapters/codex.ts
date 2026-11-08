@@ -1,3 +1,4 @@
+import { L } from "../../shared/i18n.ts";
 import { REPLY_DESCRIPTION_LIMIT, REPLY_HEADER_LIMIT } from "../../shared/replies.ts";
 import { execFile, spawn } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
@@ -40,15 +41,15 @@ const ACTIVE_WINDOW_MS = 30 * 60 * 1000;
 const DECISION_POLL_MS = 500;
 const DECISION_SNAPSHOTS = 8;
 const DECISION_WINDOW_MS = 4000;
-const COMMAND_LABELS: Record<string, string> = { accept: "Cho phép", acceptForSession: "Cho phép cả phiên", acceptWithExecpolicyAmendment: "Luôn cho phép lệnh tương tự", decline: "Từ chối, Codex làm tiếp", cancel: "Từ chối và dừng lượt" };
-const FILE_LABELS: Record<string, string> = { accept: "Cho phép", acceptForSession: "Cho phép mọi sửa file trong phiên", decline: "Từ chối, Codex làm tiếp", cancel: "Từ chối và dừng lượt" };
+const COMMAND_LABELS: Record<string, string> = { accept: L("Cho phép"), acceptForSession: L("Cho phép cả phiên"), acceptWithExecpolicyAmendment: L("Luôn cho phép lệnh tương tự"), decline: L("Từ chối, Codex làm tiếp"), cancel: L("Từ chối và dừng lượt") };
+const FILE_LABELS: Record<string, string> = { accept: L("Cho phép"), acceptForSession: L("Cho phép mọi sửa file trong phiên"), decline: L("Từ chối, Codex làm tiếp"), cancel: L("Từ chối và dừng lượt") };
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const execute = promisify(execFile);
 export const codexData = (value: unknown): Data => value !== null && typeof value === "object" && !Array.isArray(value) ? value as Data : {};
 const hash = (value: unknown) => createHash("sha256").update(JSON.stringify(value)).digest("hex");
 const equal = (left: unknown, right: unknown) => JSON.stringify(left) === JSON.stringify(right);
 export const codexNormalizedPath = (value: string) => /^[a-z]:[\\/]/i.test(value) ? path.win32.normalize(value).replace(/[\\/]+$/, "").toLowerCase() : path.posix.normalize(value).replace(/\/+$/, "") || "/";
-export const codexFail = () => new Error("Kênh trả lời Codex chưa xác minh được danh tính hoặc phiên bản");
+export const codexFail = () => new Error(L("Kênh trả lời Codex chưa xác minh được danh tính hoặc phiên bản"));
 
 function stableFile(file: string, limit: number): string {
   const entry = lstatSync(file, { bigint: true });
@@ -374,14 +375,14 @@ export function codexAmendment(params: Data): string[] | null {
 function approvalField(method: string, params: Data): NativeReplyQuestion["fields"][number] {
   const labels = method === COMMAND_APPROVAL_METHOD ? COMMAND_LABELS : FILE_LABELS;
   const options = Object.keys(labels).filter((option) => option !== "acceptWithExecpolicyAmendment" || codexAmendment(params));
-  return { id: "decision", text: "Quyết định của sếp", options, multiSelect: false, allowFreeText: false, labels: Object.fromEntries(options.map((option) => [option, labels[option]])) };
+  return { id: "decision", text: L("Quyết định của sếp"), options, multiSelect: false, allowFreeText: false, labels: Object.fromEntries(options.map((option) => [option, labels[option]])) };
 }
 
 function approvalDetail(method: string, params: Data): string {
-  if (method === FILE_APPROVAL_METHOD) return [...line("Thư mục xin quyền ghi", params.grantRoot), ...line("Lý do", params.reason)].join("\n") || "Codex xin sửa file trong lượt đang chạy";
+  if (method === FILE_APPROVAL_METHOD) return [...line(L("Thư mục xin quyền ghi"), params.grantRoot), ...line(L("Lý do"), params.reason)].join("\n") || L("Codex xin sửa file trong lượt đang chạy");
   const network = codexData(params.networkApprovalContext);
   const amendment = codexAmendment(params);
-  return [...params.kind === "writeStdin" ? ["Gửi dữ liệu vào terminal đang chạy"] : [], ...line("Lệnh", params.command), ...line("Thư mục", params.cwd), ...typeof network.host === "string" ? line("Mạng", `${network.host}${typeof network.protocol === "string" ? ` (${network.protocol})` : ""}`) : [], ...line("Lý do", params.reason), ...amendment ? line("Quy tắc đề xuất", amendment.join(" ")) : []].join("\n").slice(0, 7000) || "Codex xin chạy lệnh";
+  return [...params.kind === "writeStdin" ? [L("Gửi dữ liệu vào terminal đang chạy")] : [], ...line(L("Lệnh"), params.command), ...line(L("Thư mục"), params.cwd), ...typeof network.host === "string" ? line(L("Mạng"), `${network.host}${typeof network.protocol === "string" ? ` (${network.protocol})` : ""}`) : [], ...line(L("Lý do"), params.reason), ...amendment ? line(L("Quy tắc đề xuất"), amendment.join(" ")) : []].join("\n").slice(0, 7000) || L("Codex xin chạy lệnh");
 }
 
 function questionFields(params: Data): NativeReplyQuestion["fields"] | null {
@@ -438,7 +439,7 @@ export class CodexReplyAdapter implements NativeReplyAdapter {
         if (this.seen.size >= 512) this.seen.delete(this.seen.keys().next().value!);
         this.seen.set(key, askedAt);
       }
-      const title = question ? "Codex hỏi" : method === COMMAND_APPROVAL_METHOD ? "Codex xin chạy lệnh" : "Codex xin sửa file";
+      const title = question ? L("Codex hỏi") : method === COMMAND_APPROVAL_METHOD ? L("Codex xin chạy lệnh") : L("Codex xin sửa file");
       result.push({ request, question: { kind: question ? "question" : "approval", title, detail: question ? "" : approvalDetail(method, params), agentId: agent.id, app: "codex", machine: agent.machine, identity, askedAt, fields } });
     }
     return result;

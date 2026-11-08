@@ -1,3 +1,4 @@
+import { L } from "../shared/i18n.ts";
 import { PRIORITY_LABELS, TODO_LIMITS, TODO_STATUSES, columnOf, dueLabel, moveTodo, parseQuickAdd, todoCounts, vietnamDay, type Todo, type TodoFields, type TodoPriority, type TodoStatus } from "../shared/todos.ts";
 import { escapeHtml as text } from "./markdown.ts";
 import "./todos-view.css";
@@ -13,8 +14,8 @@ const GLYPHS = {
   plus: '<path d="M8 3.5v9M3.5 8h9"/>',
   close: '<path d="m4.5 4.5 7 7M11.5 4.5l-7 7"/>',
 };
-const QUICK_EXAMPLE = "Gửi báo giá ngày mai";
-const QUICK_TIP = "Nhập nhanh: <b>mai</b> hoặc <b>thứ 6</b> để đặt hạn; <b>!cao</b> để ưu tiên cao; <b>#Website</b> để chọn dự án. Hoặc chọn trực tiếp ở các ô bên dưới.";
+const QUICK_EXAMPLE = L("Gửi báo giá ngày mai");
+const QUICK_TIP = L("Nhập nhanh: <b>mai</b> hoặc <b>thứ 6</b> để đặt hạn; <b>!cao</b> để ưu tiên cao; <b>#Website</b> để chọn dự án. Hoặc chọn trực tiếp ở các ô bên dưới.");
 const EMPTY_DRAFT: TodoFields = { title: "", note: "", priority: "normal", due: null, project: "" };
 type AutoField = "due" | "priority" | "project";
 const AUTO_FIELDS: AutoField[] = ["due", "priority", "project"];
@@ -30,7 +31,7 @@ function chips(fields: Pick<TodoFields, "due" | "priority" | "project">, today: 
     const due = dueLabel(fields.due, today);
     parts.push(`<span class="td-chip" data-tone="${done ? "later" : due.tone}">${glyph("calendar")}${text(due.text)}</span>`);
   }
-  if (fields.priority !== "normal") parts.push(`<span class="td-chip" data-priority="${fields.priority}">Ưu tiên ${PRIORITY_LABELS[fields.priority].toLowerCase()}</span>`);
+  if (fields.priority !== "normal") parts.push(L("<span class=\"td-chip\" data-priority=\"{0}\">Ưu tiên {1}</span>", fields.priority, PRIORITY_LABELS[fields.priority].toLowerCase()));
   if (fields.project) parts.push(`<span class="td-chip" data-tone="project">${glyph("folder")}${text(fields.project)}</span>`);
   return parts.join("");
 }
@@ -62,11 +63,11 @@ export class TodoBoard {
     this.loading = true;
     try {
       const response = await fetch("/api/todos", { cache: "no-store", signal: AbortSignal.timeout(12_000) });
-      if (!response.ok) throw new Error(response.status === 401 ? "Phiên truy cập hết hạn. Tải lại trang để đăng nhập." : `Không đọc được danh sách việc (${response.status}).`);
+      if (!response.ok) throw new Error(response.status === 401 ? L("Phiên truy cập hết hạn. Tải lại trang để đăng nhập.") : L("Không đọc được danh sách việc ({0}).", response.status));
       this.todos = ((await response.json()) as { todos: Todo[] }).todos;
       this.error = "";
     } catch (error) {
-      this.error = error instanceof Error ? error.message : "Không đọc được danh sách việc.";
+      this.error = error instanceof Error ? error.message : L("Không đọc được danh sách việc.");
     } finally {
       this.loading = false;
       this.changed(this.list());
@@ -75,18 +76,18 @@ export class TodoBoard {
 
   markup(now = Date.now()): string {
     const today = vietnamDay(now);
-    if (!this.todos) return `<div class="ops-empty"><strong>${this.error ? "Chưa đọc được danh sách việc" : "Đang tải việc cá nhân"}</strong><p>${text(this.error || "Danh sách lưu trên hub, mở ở máy nào cũng thấy giống nhau.")}</p></div>`;
+    if (!this.todos) return `<div class="ops-empty"><strong>${this.error ? L("Chưa đọc được danh sách việc") : L("Đang tải việc cá nhân")}</strong><p>${text(this.error || L("Danh sách lưu trên hub, mở ở máy nào cũng thấy giống nhau."))}</p></div>`;
     const counts = todoCounts(this.todos, today);
-    const summary = [`${counts.todo} cần làm`, `${counts.doing} đang làm`, counts.overdue ? `${counts.overdue} quá hạn` : "", counts.doneToday ? `${counts.doneToday} xong hôm nay` : ""].filter(Boolean).join(" · ");
+    const summary = [L("{0} cần làm", counts.todo), L("{0} đang làm", counts.doing), counts.overdue ? L("{0} quá hạn", counts.overdue) : "", counts.doneToday ? L("{0} xong hôm nay", counts.doneToday) : ""].filter(Boolean).join(" · ");
     const error = this.error && !this.adding ? `<p class="td-error" role="alert">${text(this.error)}</p>` : "";
     const popup = this.adding ? this.addMarkup() : "";
-    return `<div class="td-wrap"><div class="ops-section-heading td-heading"><h2>Việc cá nhân</h2><p>${text(summary)}. Kéo thẻ sang cột khác, hoặc chọn thẻ rồi bấm Alt + phím mũi tên.</p></div>${error}<div class="td-board">${TODO_STATUSES.map(([status, label]) => this.columnMarkup(status, label, today)).join("")}</div>${popup}</div>`;
+    return L("<div class=\"td-wrap\"><div class=\"ops-section-heading td-heading\"><h2>Việc cá nhân</h2><p>{0}. Kéo thẻ sang cột khác, hoặc chọn thẻ rồi bấm Alt + phím mũi tên.</p></div>{1}<div class=\"td-board\">{2}</div>{3}</div>", text(summary), error, TODO_STATUSES.map(([status, label]) => this.columnMarkup(status, label, today)).join(""), popup);
   }
 
   private columnMarkup(status: TodoStatus, label: string, today: string): string {
     const cards = columnOf(this.list(), status);
-    const add = status === "todo" ? `<button type="button" class="td-add-open" data-todo-add-open data-key="todo-add:open" aria-haspopup="dialog">${glyph("plus")}Thêm việc</button>` : "";
-    const body = cards.map((todo) => (todo.id === this.editing ? this.editMarkup(todo) : this.cardMarkup(todo, today))).join("") || `<li class="td-empty">${status === "todo" ? "Chưa có việc nào. Bấm Thêm việc để tạo việc đầu tiên." : status === "doing" ? "Kéo việc vào đây khi bắt đầu làm." : "Việc xong sẽ nằm ở đây."}</li>`;
+    const add = status === "todo" ? L("<button type=\"button\" class=\"td-add-open\" data-todo-add-open data-key=\"todo-add:open\" aria-haspopup=\"dialog\">{0}Thêm việc</button>", glyph("plus")) : "";
+    const body = cards.map((todo) => (todo.id === this.editing ? this.editMarkup(todo) : this.cardMarkup(todo, today))).join("") || `<li class="td-empty">${status === "todo" ? L("Chưa có việc nào. Bấm Thêm việc để tạo việc đầu tiên.") : status === "doing" ? L("Kéo việc vào đây khi bắt đầu làm.") : L("Việc xong sẽ nằm ở đây.")}</li>`;
     return `<section class="td-column" data-status="${status}" aria-labelledby="td-head-${status}"><header class="td-column-head"><h3 id="td-head-${status}">${label}</h3><span class="td-count">${cards.length}</span></header>${add}<ol class="td-list" data-drop="${status}" aria-label="${label}">${body}</ol></section>`;
   }
 
@@ -94,38 +95,38 @@ export class TodoBoard {
     const draft = this.addDraft;
     const options = (Object.keys(PRIORITY_LABELS) as TodoPriority[]).map((value) => `<option value="${value}" ${draft.priority === value ? "selected" : ""}>${PRIORITY_LABELS[value]}</option>`).join("");
     const projects = [...new Set(this.list().map((todo) => todo.project).filter(Boolean))].sort((a, b) => a.localeCompare(b, "vi")).map((project) => `<option value="${text(project)}"></option>`).join("");
-    const title = `<div class="td-field"><label for="td-quick">Tên việc</label><input id="td-quick" type="text" autocomplete="off" required maxlength="${TODO_LIMITS.title + 80}" placeholder="Ví dụ: ${QUICK_EXAMPLE}" value="${text(draft.title)}" aria-describedby="td-quick-hint" data-todo-add-field="title" data-key="todo-add:title"><p class="td-hint" id="td-quick-hint" data-todo-hint>${this.hintMarkup()}</p></div>`;
-    const note = `<div class="td-field"><label for="td-add-note">Ghi chú</label><textarea id="td-add-note" rows="2" maxlength="${TODO_LIMITS.note}" placeholder="Chi tiết, đường dẫn, người liên quan (không bắt buộc)" data-todo-add-field="note" data-key="todo-add:note">${text(draft.note)}</textarea></div>`;
-    const due = `<div class="td-field"><label for="td-add-due">Hạn chót</label><input id="td-add-due" type="date" value="${text(draft.due ?? "")}" data-todo-add-field="due" data-key="todo-add:due"></div>`;
-    const priority = `<div class="td-field"><label for="td-add-priority">Ưu tiên</label><select id="td-add-priority" data-todo-add-field="priority" data-key="todo-add:priority">${options}</select></div>`;
-    const project = `<div class="td-field"><label for="td-add-project">Dự án</label><input id="td-add-project" type="text" autocomplete="off" list="td-projects" maxlength="${TODO_LIMITS.project}" placeholder="Tuỳ chọn" value="${text(draft.project)}" data-todo-add-field="project" data-key="todo-add:project"></div><datalist id="td-projects">${projects}</datalist>`;
+    const title = L("<div class=\"td-field\"><label for=\"td-quick\">Tên việc</label><input id=\"td-quick\" type=\"text\" autocomplete=\"off\" required maxlength=\"{0}\" placeholder=\"Ví dụ: {1}\" value=\"{2}\" aria-describedby=\"td-quick-hint\" data-todo-add-field=\"title\" data-key=\"todo-add:title\"><p class=\"td-hint\" id=\"td-quick-hint\" data-todo-hint>{3}</p></div>", TODO_LIMITS.title + 80, QUICK_EXAMPLE, text(draft.title), this.hintMarkup());
+    const note = L("<div class=\"td-field\"><label for=\"td-add-note\">Ghi chú</label><textarea id=\"td-add-note\" rows=\"2\" maxlength=\"{0}\" placeholder=\"Chi tiết, đường dẫn, người liên quan (không bắt buộc)\" data-todo-add-field=\"note\" data-key=\"todo-add:note\">{1}</textarea></div>", TODO_LIMITS.note, text(draft.note));
+    const due = L("<div class=\"td-field\"><label for=\"td-add-due\">Hạn chót</label><input id=\"td-add-due\" type=\"date\" value=\"{0}\" data-todo-add-field=\"due\" data-key=\"todo-add:due\"></div>", text(draft.due ?? ""));
+    const priority = L("<div class=\"td-field\"><label for=\"td-add-priority\">Ưu tiên</label><select id=\"td-add-priority\" data-todo-add-field=\"priority\" data-key=\"todo-add:priority\">{0}</select></div>", options);
+    const project = L("<div class=\"td-field\"><label for=\"td-add-project\">Dự án</label><input id=\"td-add-project\" type=\"text\" autocomplete=\"off\" list=\"td-projects\" maxlength=\"{0}\" placeholder=\"Tuỳ chọn\" value=\"{1}\" data-todo-add-field=\"project\" data-key=\"todo-add:project\"></div><datalist id=\"td-projects\">{2}</datalist>", TODO_LIMITS.project, text(draft.project), projects);
     const error = this.error ? `<p class="td-error" role="alert">${text(this.error)}</p>` : "";
     const busy = this.saving.has("new");
-    const header = `<header class="td-pop-head"><h3 id="td-pop-title">Thêm việc mới</h3><button type="button" class="td-icon" data-todo-add-close data-key="todo-add:close" aria-label="Đóng" title="Đóng (Esc)">${glyph("close")}</button></header>`;
-    const footer = `<footer class="td-pop-foot"><button type="button" class="td-pop-reset" data-todo-add-reset data-key="todo-add:reset">Xoá trống</button><button type="button" data-todo-add-close data-key="todo-add:cancel">Huỷ</button><button type="submit" class="ops-primary" data-key="todo-add:submit"${busy ? " disabled" : ""}>${busy ? "Đang lưu…" : "Thêm việc"}</button></footer>`;
+    const header = L("<header class=\"td-pop-head\"><h3 id=\"td-pop-title\">Thêm việc mới</h3><button type=\"button\" class=\"td-icon\" data-todo-add-close data-key=\"todo-add:close\" aria-label=\"Đóng\" title=\"Đóng (Esc)\">{0}</button></header>", glyph("close"));
+    const footer = L("<footer class=\"td-pop-foot\"><button type=\"button\" class=\"td-pop-reset\" data-todo-add-reset data-key=\"todo-add:reset\">Xoá trống</button><button type=\"button\" data-todo-add-close data-key=\"todo-add:cancel\">Huỷ</button><button type=\"submit\" class=\"ops-primary\" data-key=\"todo-add:submit\"{0}>{1}</button></footer>", busy ? " disabled" : "", busy ? L("Đang lưu…") : L("Thêm việc"));
     return `<div class="td-pop-back" aria-hidden="true" data-todo-add-close></div><div class="td-pop" role="dialog" aria-modal="true" tabindex="-1" aria-labelledby="td-pop-title"><form class="td-add" data-todo-add>${header}<div class="td-pop-body">${title}${note}<div class="td-add-row">${due}${priority}${project}</div>${error}</div>${footer}</form></div>`;
   }
 
   private hintMarkup(): string {
     const raw = this.addDraft.title.trim();
     const saved = raw ? parseQuickAdd(raw, vietnamDay(Date.now())).title : "";
-    return saved && saved !== raw ? `<span class="td-hint-label">Tên sẽ lưu:</span> ${text(saved)}` : QUICK_TIP;
+    return saved && saved !== raw ? L("<span class=\"td-hint-label\">Tên sẽ lưu:</span> {0}", text(saved)) : QUICK_TIP;
   }
 
   private cardMarkup(todo: Todo, today: string): string {
     const index = ORDER.indexOf(todo.status);
     const done = todo.status === "done";
     const busy = this.saving.has(todo.id);
-    const back = index > 0 ? `<button type="button" class="td-icon" data-todo-move="${todo.id}" data-to="${ORDER[index - 1]}" aria-label="Chuyển về ${TODO_STATUSES[index - 1][1]}" title="Chuyển về ${TODO_STATUSES[index - 1][1]}">${glyph("left")}</button>` : "";
-    const forward = index < ORDER.length - 1 ? `<button type="button" class="td-icon" data-todo-move="${todo.id}" data-to="${ORDER[index + 1]}" aria-label="Chuyển sang ${TODO_STATUSES[index + 1][1]}" title="Chuyển sang ${TODO_STATUSES[index + 1][1]}">${glyph("right")}</button>` : "";
+    const back = index > 0 ? L("<button type=\"button\" class=\"td-icon\" data-todo-move=\"{0}\" data-to=\"{1}\" aria-label=\"Chuyển về {2}\" title=\"Chuyển về {3}\">{4}</button>", todo.id, ORDER[index - 1], TODO_STATUSES[index - 1][1], TODO_STATUSES[index - 1][1], glyph("left")) : "";
+    const forward = index < ORDER.length - 1 ? L("<button type=\"button\" class=\"td-icon\" data-todo-move=\"{0}\" data-to=\"{1}\" aria-label=\"Chuyển sang {2}\" title=\"Chuyển sang {3}\">{4}</button>", todo.id, ORDER[index + 1], TODO_STATUSES[index + 1][1], TODO_STATUSES[index + 1][1], glyph("right")) : "";
     const meta = chips(todo, today, done);
-    return `<li class="td-card" draggable="true" tabindex="0" data-todo="${todo.id}" data-key="todo:${todo.id}" data-priority="${todo.priority}" data-busy="${busy}" aria-label="${text(todo.title)}"><button type="button" class="td-check" data-todo-toggle="${todo.id}" aria-pressed="${done}" aria-label="${done ? "Mở lại việc này" : "Đánh dấu đã xong"}" title="${done ? "Mở lại" : "Xong"}">${glyph("check")}</button><div class="td-body"><p class="td-title">${text(todo.title)}</p>${todo.note ? `<p class="td-note">${text(todo.note)}</p>` : ""}${meta ? `<div class="td-meta">${meta}</div>` : ""}</div><div class="td-actions">${back}${forward}<button type="button" class="td-icon" data-todo-edit="${todo.id}" aria-label="Sửa việc" title="Sửa">${glyph("edit")}</button><button type="button" class="td-icon" data-todo-delete="${todo.id}" aria-label="Xoá việc" title="Xoá">${glyph("trash")}</button></div></li>`;
+    return L("<li class=\"td-card\" draggable=\"true\" tabindex=\"0\" data-todo=\"{0}\" data-key=\"todo:{1}\" data-priority=\"{2}\" data-busy=\"{3}\" aria-label=\"{4}\"><button type=\"button\" class=\"td-check\" data-todo-toggle=\"{5}\" aria-pressed=\"{6}\" aria-label=\"{7}\" title=\"{8}\">{9}</button><div class=\"td-body\"><p class=\"td-title\">{10}</p>{11}{12}</div><div class=\"td-actions\">{13}{14}<button type=\"button\" class=\"td-icon\" data-todo-edit=\"{15}\" aria-label=\"Sửa việc\" title=\"Sửa\">{16}</button><button type=\"button\" class=\"td-icon\" data-todo-delete=\"{17}\" aria-label=\"Xoá việc\" title=\"Xoá\">{18}</button></div></li>", todo.id, todo.id, todo.priority, busy, text(todo.title), todo.id, done, done ? L("Mở lại việc này") : L("Đánh dấu đã xong"), done ? L("Mở lại") : "Xong", glyph("check"), text(todo.title), todo.note ? `<p class="td-note">${text(todo.note)}</p>` : "", meta ? `<div class="td-meta">${meta}</div>` : "", back, forward, todo.id, glyph("edit"), todo.id, glyph("trash"));
   }
 
   private editMarkup(todo: Todo): string {
     const draft = this.draft!;
     const options = (Object.keys(PRIORITY_LABELS) as TodoPriority[]).map((value) => `<option value="${value}" ${draft.priority === value ? "selected" : ""}>${PRIORITY_LABELS[value]}</option>`).join("");
-    return `<li class="td-card td-editing"><form class="td-edit" data-todo-form="${todo.id}"><label>Tên việc<input type="text" maxlength="${TODO_LIMITS.title}" required value="${text(draft.title)}" data-todo-field="title" data-key="todo-edit:title"></label><label>Ghi chú<textarea rows="3" maxlength="${TODO_LIMITS.note}" data-todo-field="note" data-key="todo-edit:note">${text(draft.note)}</textarea></label><div class="td-edit-row"><label>Hạn chót<input type="date" value="${text(draft.due ?? "")}" data-todo-field="due" data-key="todo-edit:due"></label><label>Ưu tiên<select data-todo-field="priority" data-key="todo-edit:priority">${options}</select></label><label>Dự án<input type="text" maxlength="${TODO_LIMITS.project}" value="${text(draft.project)}" data-todo-field="project" data-key="todo-edit:project"></label></div><div class="td-edit-actions"><button type="button" data-todo-cancel data-key="todo-edit:cancel">Huỷ</button><button type="submit" class="ops-primary" data-key="todo-edit:save">Lưu</button></div></form></li>`;
+    return L("<li class=\"td-card td-editing\"><form class=\"td-edit\" data-todo-form=\"{0}\"><label>Tên việc<input type=\"text\" maxlength=\"{1}\" required value=\"{2}\" data-todo-field=\"title\" data-key=\"todo-edit:title\"></label><label>Ghi chú<textarea rows=\"3\" maxlength=\"{3}\" data-todo-field=\"note\" data-key=\"todo-edit:note\">{4}</textarea></label><div class=\"td-edit-row\"><label>Hạn chót<input type=\"date\" value=\"{5}\" data-todo-field=\"due\" data-key=\"todo-edit:due\"></label><label>Ưu tiên<select data-todo-field=\"priority\" data-key=\"todo-edit:priority\">{6}</select></label><label>Dự án<input type=\"text\" maxlength=\"{7}\" value=\"{8}\" data-todo-field=\"project\" data-key=\"todo-edit:project\"></label></div><div class=\"td-edit-actions\"><button type=\"button\" data-todo-cancel data-key=\"todo-edit:cancel\">Huỷ</button><button type=\"submit\" class=\"ops-primary\" data-key=\"todo-edit:save\">Lưu</button></div></form></li>", todo.id, TODO_LIMITS.title, text(draft.title), TODO_LIMITS.note, text(draft.note), text(draft.due ?? ""), options, TODO_LIMITS.project, text(draft.project));
   }
 
   click(target: Element): boolean {
@@ -328,7 +329,7 @@ export class TodoBoard {
   private async write(method: string, id: string | null, body?: unknown): Promise<Todo | null> {
     const response = await fetch(id ? `/api/todos/${encodeURIComponent(id)}` : "/api/todos", { method, headers: body ? { "content-type": "application/json" } : undefined, body: body ? JSON.stringify(body) : undefined, signal: AbortSignal.timeout(12_000) });
     const payload = (await response.json().catch(() => null)) as (Todo & { error?: string }) | null;
-    if (!response.ok) throw new Error(response.status === 401 ? "Phiên truy cập hết hạn. Tải lại trang để đăng nhập." : payload?.error ?? `Hub trả lỗi ${response.status}.`);
+    if (!response.ok) throw new Error(response.status === 401 ? L("Phiên truy cập hết hạn. Tải lại trang để đăng nhập.") : payload?.error ?? L("Hub trả lỗi {0}.", response.status));
     return method === "DELETE" ? null : payload;
   }
 
@@ -338,7 +339,7 @@ export class TodoBoard {
       await action();
       this.error = "";
     } catch (error) {
-      this.error = error instanceof Error ? error.message : "Không lưu được việc. Thử lại sau.";
+      this.error = error instanceof Error ? error.message : L("Không lưu được việc. Thử lại sau.");
       await this.refresh();
     } finally {
       this.saving.delete(id);
@@ -350,7 +351,7 @@ export class TodoBoard {
     const draft = this.addDraft;
     const fields: TodoFields = { ...draft, title: parseQuickAdd(draft.title, vietnamDay(Date.now())).title, note: draft.note.trim(), project: draft.project.trim() };
     if (!fields.title) {
-      this.error = "Nhập tên việc trước khi thêm.";
+      this.error = L("Nhập tên việc trước khi thêm.");
       this.changed(this.list());
       return;
     }
@@ -381,7 +382,7 @@ export class TodoBoard {
     const draft = this.draft;
     if (!draft) return;
     if (!draft.title.trim()) {
-      this.error = "Tên việc không được để trống.";
+      this.error = L("Tên việc không được để trống.");
       this.changed(this.list());
       return;
     }
@@ -396,7 +397,7 @@ export class TodoBoard {
 
   private async remove(id: string): Promise<void> {
     const todo = this.find(id);
-    if (!todo || !window.confirm(`Xoá việc “${todo.title}”?`)) return;
+    if (!todo || !window.confirm(L("Xoá việc “{0}”?", todo.title))) return;
     this.todos = this.list().filter((item) => item.id !== id);
     this.changed(this.list());
     await this.run(id, async () => {

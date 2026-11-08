@@ -1,3 +1,4 @@
+import { L } from "../shared/i18n.ts";
 import { formatDuration } from "../shared/youtube.ts";
 
 const QUALITY: Record<string, string> = {
@@ -13,11 +14,11 @@ const QUALITY: Record<string, string> = {
 };
 
 export function qualityLabel(quality: string | undefined): string {
-  return (quality && QUALITY[quality]) || "Tự động";
+  return (quality && QUALITY[quality]) || L("Tự động");
 }
 
 export function rateLabel(rate: number): string {
-  return rate === 1 ? "Bình thường" : `${String(rate).replace(".", ",")}×`;
+  return rate === 1 ? L("Bình thường") : `${String(rate).replace(".", ",")}×`;
 }
 
 export function seekFraction(offset: number, width: number): number {
@@ -110,38 +111,7 @@ export interface ControlHost {
 
 type Panel = "closed" | "main" | "speed";
 
-const MARKUP = `
-  <div class="yt-shield" data-ctl="shield"></div>
-  <div class="yt-chrome">
-    <div class="yt-scrim-top"></div>
-    <div class="yt-scrim-bottom"></div>
-    <div class="yt-top"><strong data-c="title"></strong><span data-c="channel"></span></div>
-    <div class="yt-center">
-      <button type="button" class="yt-round" data-ctl="prev" aria-label="Video trước">${svg(ICON.prev)}</button>
-      <button type="button" class="yt-round yt-round-big" data-ctl="toggle" data-c="center-toggle" aria-label="Phát">${svg(ICON.play)}</button>
-      <button type="button" class="yt-round" data-ctl="next" aria-label="Video tiếp theo">${svg(ICON.next)}</button>
-    </div>
-    <div class="yt-controls">
-      <div class="yt-seek" data-c="seek" role="slider" tabindex="0" aria-label="Tua video" aria-valuemin="0">
-        <div class="yt-seek-track"><div class="yt-seek-buffer"></div><div class="yt-seek-fill"></div></div>
-        <div class="yt-seek-knob"></div>
-        <div class="yt-seek-tip" data-c="tip" hidden></div>
-      </div>
-      <div class="yt-ctrl-row">
-        <button type="button" class="yt-ctrl" data-ctl="toggle" data-c="toggle" aria-label="Phát">${svg(ICON.play)}</button>
-        <button type="button" class="yt-ctrl" data-ctl="next" aria-label="Video tiếp theo">${svg(ICON.next)}</button>
-        <button type="button" class="yt-ctrl" data-ctl="mute" data-c="mute" aria-label="Tắt tiếng">${svg(ICON.volume)}</button>
-        <input type="range" class="yt-volume" data-c="volume" min="0" max="100" step="1" aria-label="Âm lượng">
-        <span class="yt-time" data-c="time">0:00</span>
-        <span class="yt-spacer"></span>
-        <button type="button" class="yt-ctrl" data-ctl="captions" data-c="captions" aria-pressed="false" aria-label="Phụ đề">${svg(ICON.captions)}</button>
-        <button type="button" class="yt-ctrl" data-ctl="settings" data-c="settings-btn" aria-expanded="false" aria-label="Cài đặt">${svg(ICON.settings)}</button>
-        <button type="button" class="yt-ctrl" data-ctl="minimize" aria-label="Thu nhỏ, vẫn phát tiếp">${svg(ICON.minimize)}</button>
-        <button type="button" class="yt-ctrl" data-ctl="fullscreen" data-c="fullscreen" aria-label="Toàn màn hình">${svg(ICON.fullscreen)}</button>
-      </div>
-    </div>
-    <div class="yt-settings" data-c="settings" role="menu" hidden></div>
-  </div>`;
+const MARKUP = L("\n  <div class=\"yt-shield\" data-ctl=\"shield\"></div>\n  <div class=\"yt-chrome\">\n    <div class=\"yt-scrim-top\"></div>\n    <div class=\"yt-scrim-bottom\"></div>\n    <div class=\"yt-top\"><strong data-c=\"title\"></strong><span data-c=\"channel\"></span></div>\n    <div class=\"yt-center\">\n      <button type=\"button\" class=\"yt-round\" data-ctl=\"prev\" aria-label=\"Video trước\">{0}</button>\n      <button type=\"button\" class=\"yt-round yt-round-big\" data-ctl=\"toggle\" data-c=\"center-toggle\" aria-label=\"Phát\">{1}</button>\n      <button type=\"button\" class=\"yt-round\" data-ctl=\"next\" aria-label=\"Video tiếp theo\">{2}</button>\n    </div>\n    <div class=\"yt-controls\">\n      <div class=\"yt-seek\" data-c=\"seek\" role=\"slider\" tabindex=\"0\" aria-label=\"Tua video\" aria-valuemin=\"0\">\n        <div class=\"yt-seek-track\"><div class=\"yt-seek-buffer\"></div><div class=\"yt-seek-fill\"></div></div>\n        <div class=\"yt-seek-knob\"></div>\n        <div class=\"yt-seek-tip\" data-c=\"tip\" hidden></div>\n      </div>\n      <div class=\"yt-ctrl-row\">\n        <button type=\"button\" class=\"yt-ctrl\" data-ctl=\"toggle\" data-c=\"toggle\" aria-label=\"Phát\">{3}</button>\n        <button type=\"button\" class=\"yt-ctrl\" data-ctl=\"next\" aria-label=\"Video tiếp theo\">{4}</button>\n        <button type=\"button\" class=\"yt-ctrl\" data-ctl=\"mute\" data-c=\"mute\" aria-label=\"Tắt tiếng\">{5}</button>\n        <input type=\"range\" class=\"yt-volume\" data-c=\"volume\" min=\"0\" max=\"100\" step=\"1\" aria-label=\"Âm lượng\">\n        <span class=\"yt-time\" data-c=\"time\">0:00</span>\n        <span class=\"yt-spacer\"></span>\n        <button type=\"button\" class=\"yt-ctrl\" data-ctl=\"captions\" data-c=\"captions\" aria-pressed=\"false\" aria-label=\"Phụ đề\">{6}</button>\n        <button type=\"button\" class=\"yt-ctrl\" data-ctl=\"settings\" data-c=\"settings-btn\" aria-expanded=\"false\" aria-label=\"Cài đặt\">{7}</button>\n        <button type=\"button\" class=\"yt-ctrl\" data-ctl=\"minimize\" aria-label=\"Thu nhỏ, vẫn phát tiếp\">{8}</button>\n        <button type=\"button\" class=\"yt-ctrl\" data-ctl=\"fullscreen\" data-c=\"fullscreen\" aria-label=\"Toàn màn hình\">{9}</button>\n      </div>\n    </div>\n    <div class=\"yt-settings\" data-c=\"settings\" role=\"menu\" hidden></div>\n  </div>", svg(ICON.prev), svg(ICON.play), svg(ICON.next), svg(ICON.play), svg(ICON.next), svg(ICON.volume), svg(ICON.captions), svg(ICON.settings), svg(ICON.minimize), svg(ICON.fullscreen));
 
 export class PlayerControls {
   readonly element = document.createElement("div");
@@ -195,7 +165,7 @@ export class PlayerControls {
     for (const name of ["toggle", "center-toggle"]) {
       const button = this.c(name);
       button.innerHTML = svg(playing ? ICON.pause : ICON.play);
-      button.setAttribute("aria-label", playing ? "Tạm dừng" : "Phát");
+      button.setAttribute("aria-label", playing ? L("Tạm dừng") : L("Phát"));
     }
     this.c("title").textContent = info.title;
     this.c("channel").textContent = info.channel;
@@ -330,7 +300,7 @@ export class PlayerControls {
     slider.style.setProperty("--level", `${level}%`);
     const mute = this.c("mute");
     mute.innerHTML = svg(level === 0 ? ICON.muted : ICON.volume);
-    mute.setAttribute("aria-label", level === 0 ? "Bật tiếng" : "Tắt tiếng");
+    mute.setAttribute("aria-label", level === 0 ? L("Bật tiếng") : L("Tắt tiếng"));
   }
 
   private toggleCaptions(): void {
@@ -386,7 +356,7 @@ export class PlayerControls {
     const live = this.host.video().live;
     const time = this.c("time");
     time.classList.toggle("yt-time-live", live);
-    time.textContent = live ? "TRỰC TIẾP" : clockText(current, duration);
+    time.textContent = live ? L("TRỰC TIẾP") : clockText(current, duration);
     const seek = this.c("seek");
     seek.setAttribute("aria-valuemax", String(Math.round(duration)));
     seek.setAttribute("aria-valuenow", String(Math.round(current)));
@@ -458,15 +428,11 @@ export class PlayerControls {
   private speedMenu(player: ControlPlayer | null, rate: number): string {
     const rates = player?.getAvailablePlaybackRates() ?? [1];
     const rows = rates.map((option) => `<button type="button" class="yt-set-row" role="menuitemradio" aria-checked="${option === rate}" data-rate="${option}"><span class="yt-set-check">${option === rate ? svg(ICON.check) : ""}</span><span>${escText(rateLabel(option))}</span></button>`);
-    return `<button type="button" class="yt-set-row yt-set-head" data-ctl="back">${svg(ICON.back)}<span>Tốc độ phát</span></button>${rows.join("")}`;
+    return L("<button type=\"button\" class=\"yt-set-row yt-set-head\" data-ctl=\"back\">{0}<span>Tốc độ phát</span></button>{1}", svg(ICON.back), rows.join(""));
   }
 
   private mainMenu(player: ControlPlayer | null, rate: number): string {
-    return `
-      <div class="yt-set-row yt-set-static">${svg(ICON.quality)}<span>Chất lượng</span><span class="yt-set-value">${escText(qualityLabel(player?.getPlaybackQuality?.()))}</span></div>
-      <button type="button" class="yt-set-row" role="menuitem" data-ctl="speed">${svg(ICON.speed)}<span>Tốc độ</span><span class="yt-set-value">${escText(rateLabel(rate))}</span>${svg(ICON.chevron)}</button>
-      <button type="button" class="yt-set-row" role="menuitemcheckbox" aria-checked="${this.captionsOn}" data-ctl="captions">${svg(ICON.captions)}<span>Phụ đề</span><span class="yt-set-value">${this.captionsOn ? "Bật" : "Tắt"}</span></button>
-      <button type="button" class="yt-set-row" role="menuitem" data-ctl="open-youtube">${svg(ICON.external)}<span>Mở trên YouTube</span></button>`;
+    return L("\n      <div class=\"yt-set-row yt-set-static\">{0}<span>Chất lượng</span><span class=\"yt-set-value\">{1}</span></div>\n      <button type=\"button\" class=\"yt-set-row\" role=\"menuitem\" data-ctl=\"speed\">{2}<span>Tốc độ</span><span class=\"yt-set-value\">{3}</span>{4}</button>\n      <button type=\"button\" class=\"yt-set-row\" role=\"menuitemcheckbox\" aria-checked=\"{5}\" data-ctl=\"captions\">{6}<span>Phụ đề</span><span class=\"yt-set-value\">{7}</span></button>\n      <button type=\"button\" class=\"yt-set-row\" role=\"menuitem\" data-ctl=\"open-youtube\">{8}<span>Mở trên YouTube</span></button>", svg(ICON.quality), escText(qualityLabel(player?.getPlaybackQuality?.())), svg(ICON.speed), escText(rateLabel(rate)), svg(ICON.chevron), this.captionsOn, svg(ICON.captions), this.captionsOn ? L("Bật") : L("Tắt"), svg(ICON.external));
   }
 
   private toggleFullscreen(): void {
@@ -478,7 +444,7 @@ export class PlayerControls {
     const full = document.fullscreenElement === this.box;
     const button = this.c("fullscreen");
     button.innerHTML = svg(full ? ICON.exitFullscreen : ICON.fullscreen);
-    button.setAttribute("aria-label", full ? "Thoát toàn màn hình" : "Toàn màn hình");
+    button.setAttribute("aria-label", full ? L("Thoát toàn màn hình") : L("Toàn màn hình"));
     const style = this.element.style;
     if (!full) {
       for (const prop of ["zoom", "width", "height"]) style.removeProperty(prop);

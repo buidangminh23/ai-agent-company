@@ -1,3 +1,4 @@
+import { L } from "../shared/i18n.ts";
 import type { AgentMessage, MachineId } from "../shared/types.ts";
 import { messageStatus, messageStatusLabel } from "../shared/messages.ts";
 import type { AgentManager, SeatTarget } from "./agents.ts";
@@ -97,13 +98,13 @@ export class Courier {
       visit.arrivedAt ??= now;
       const confirmed = state === "delivered" || state === "replied";
       const receiving = confirmed && Boolean(next) && now - visit.arrivedAt >= TALK_MS / 2;
-      const label = disconnected ? senderOffline ? "Máy gửi mất kết nối" : "Máy đích mất kết nối" : messageStatusLabel(state);
-      const toName = recipient ? roleLabel(recipient) : message.targetLabel ?? "người nhận";
+      const label = disconnected ? senderOffline ? L("Máy gửi mất kết nối") : L("Máy đích mất kết nối") : messageStatusLabel(state);
+      const toName = recipient ? roleLabel(recipient) : message.targetLabel ?? L("người nhận");
       lines.set(from, `${label} · ${toName}: ${message.summary}`);
       cues.set(from, cue(next ? agents.position(message.toId) : null, !receiving));
       if (confirmed && next) {
         cues.set(message.toId, cue(agents.position(from), receiving));
-        if (receiving) lines.set(message.toId, state === "replied" ? "Đã có phản hồi trong cuộc trao đổi." : "Đã xác nhận nhận tin.");
+        if (receiving) lines.set(message.toId, state === "replied" ? L("Đã có phản hồi trong cuộc trao đổi.") : L("Đã xác nhận nhận tin."));
       }
     }
     agents.communicate(cues, lines);

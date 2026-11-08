@@ -1,3 +1,4 @@
+import { L, getLang, locale, storeLang } from "../shared/i18n.ts";
 import type { AgentInfo, MachineId, Snapshot } from "../shared/types.ts";
 import type { CalendarEvent, InboxSnapshot, MailContent } from "../shared/inbox.ts";
 import { ALL_MAILBOXES, calendarRange, calendarScrollTop, calendarView, eventsToday, mailView, newDraft, draftFromEvent, draftToInput, shiftAnchor, todayKey, type CalendarMode, type EventDraft, type MailReader } from "./inbox-views.ts";
@@ -62,11 +63,11 @@ export const ICONS = {
   calendar: '<rect x="2.5" y="3.5" width="11" height="10" rx="1.3"/><path d="M2.5 6.5h11M5.5 2v3M10.5 2v3"/>',
   send: '<path d="M13.5 2.5 2.5 7l4.2 1.8L8.5 13zM6.7 8.8l6.8-6.3"/>',
 };
-const TABS: [Tab, string, keyof typeof ICONS][] = [["overview", "Tổng quan", "grid"], ["github", "GitHub", "git"], ["projects", "Công việc", "board"], ["mail", "Thư", "mail"], ["calendar", "Lịch", "calendar"], ["automation", "Hệ thống", "machine"], ["quota", "Hạn mức", "gauge"]];
+const TABS: [Tab, string, keyof typeof ICONS][] = [["overview", L("Tổng quan"), "grid"], ["github", "GitHub", "git"], ["projects", L("Công việc"), "board"], ["mail", L("Thư"), "mail"], ["calendar", L("Lịch"), "calendar"], ["automation", L("Hệ thống"), "machine"], ["quota", L("Hạn mức"), "gauge"]];
 const SHORT_LABELS: Partial<Record<Tab, string>> = {};
 const APP_NAMES = { claude: "Claude", codex: "Codex", antigravity: "Antigravity" };
-const STATE_NAMES = { thinking: "Đang nghĩ", working: "Đang làm", waiting: "Chờ sếp", idle: "Rảnh" };
-const KIND_NAMES = { question: "Chờ trả lời", stalled: "Cần kiểm tra", offline: "Mất kết nối", failure: "Có lỗi", conflict: "Sửa trùng file" };
+const STATE_NAMES = { thinking: L("Đang nghĩ"), working: L("Đang làm"), waiting: L("Chờ sếp"), idle: L("Rảnh") };
+const KIND_NAMES = { question: L("Chờ trả lời"), stalled: L("Cần kiểm tra"), offline: L("Mất kết nối"), failure: L("Có lỗi"), conflict: L("Sửa trùng file") };
 const TIMEZONE = "Asia/Ho_Chi_Minh";
 const LONG_DETAIL = 260;
 const AGENT_ALERTS: AttentionItem["kind"][] = ["stalled", "failure", "conflict"];
@@ -75,7 +76,7 @@ const FILTER_TABS: Tab[] = ["github"];
 const MOBILE = "(max-width: 760px)";
 const CALENDAR_CACHE_MS = 5 * 60_000;
 const AUTOMATION_CACHE_MS = 60_000;
-const CHAT_NOTE = "Mở ứng dụng trên thiết bị đang xem; chat cần có trên thiết bị đó.";
+const CHAT_NOTE = L("Mở ứng dụng trên thiết bị đang xem; chat cần có trên thiết bị đó.");
 
 export function icon(name: keyof typeof ICONS, className = "ops-icon"): string {
   return `<svg class="${className}" viewBox="0 0 16 16" aria-hidden="true">${ICONS[name]}</svg>`;
@@ -83,7 +84,7 @@ export function icon(name: keyof typeof ICONS, className = "ops-icon"): string {
 
 function readable(value: string): string {
   return value
-    .replace(/!\[([^\]]*)\]\((?:<[^>]*>|[^)\s]+)\)/g, (_, alt: string) => `[Ảnh: ${alt || "không tên"}]`)
+    .replace(/!\[([^\]]*)\]\((?:<[^>]*>|[^)\s]+)\)/g, (_, alt: string) => L("[Ảnh: {0}]", alt || L("không tên")))
     .replace(/\[([^\]]+)\]\(<[^>]*>\)/g, "$1");
 }
 
@@ -92,8 +93,8 @@ function text(value: unknown): string {
 }
 
 function time(value: string | null | undefined): string {
-  if (!value || !Number.isFinite(Date.parse(value))) return "Chưa có dữ liệu";
-  return new Date(value).toLocaleString("vi-VN", { timeZone: TIMEZONE, day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+  if (!value || !Number.isFinite(Date.parse(value))) return L("Chưa có dữ liệu");
+  return new Date(value).toLocaleString(locale(), { timeZone: TIMEZONE, day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
 }
 
 function dateInput(now: number): string {
@@ -102,21 +103,21 @@ function dateInput(now: number): string {
 
 function age(value: string): string {
   const minutes = Math.max(0, Math.floor((Date.now() - Date.parse(value)) / 60_000));
-  if (!Number.isFinite(minutes)) return "Chưa rõ thời điểm";
-  return minutes < 1 ? "Vừa cập nhật" : minutes < 60 ? `${minutes} phút` : `${Math.floor(minutes / 60)} giờ ${minutes % 60} phút`;
+  if (!Number.isFinite(minutes)) return L("Chưa rõ thời điểm");
+  return minutes < 1 ? L("Vừa cập nhật") : minutes < 60 ? L("{0} phút", minutes) : L("{0} giờ {1} phút", Math.floor(minutes / 60), minutes % 60);
 }
 
 function ago(value: string): string {
   const minutes = Math.floor((Date.now() - Date.parse(value)) / 60_000);
   if (!Number.isFinite(minutes)) return "";
-  if (minutes < 1) return "vừa xong";
-  if (minutes < 60) return `${minutes} phút`;
-  return minutes < 1440 ? `${Math.floor(minutes / 60)} giờ` : `${Math.floor(minutes / 1440)} ngày`;
+  if (minutes < 1) return L("vừa xong");
+  if (minutes < 60) return L("{0} phút", minutes);
+  return minutes < 1440 ? L("{0} giờ", Math.floor(minutes / 60)) : L("{0} ngày", Math.floor(minutes / 1440));
 }
 
 function waited(value: string): string {
   const minutes = Math.floor((Date.now() - Date.parse(value)) / 60_000);
-  return Number.isFinite(minutes) && minutes >= 1 ? `Đã chờ ${age(value)}` : "Vừa phát sinh";
+  return Number.isFinite(minutes) && minutes >= 1 ? L("Đã chờ {0}", age(value)) : L("Vừa phát sinh");
 }
 
 export function safeLink(value: string | undefined): string | null {
@@ -138,7 +139,7 @@ function empty(title: string, description: string): string {
 }
 
 function coverage(value: HistoryCoverage): string {
-  return `<p class="ops-coverage">${text(value.note)}${value.from ? ` · Dữ liệu từ ${time(value.from)}` : ""} · Giữ ${value.retentionDays} ngày${value.persistent ? "" : " · Chưa lưu bền vững"}</p>`;
+  return L("<p class=\"ops-coverage\">{0}{1} · Giữ {2} ngày{3}</p>", text(value.note), value.from ? L(" · Dữ liệu từ {0}", time(value.from)) : "", value.retentionDays, value.persistent ? "" : L(" · Chưa lưu bền vững"));
 }
 
 export class OperationsDashboard {
@@ -231,18 +232,13 @@ export class OperationsDashboard {
     this.toggle.className = "ops-toggle";
     this.toggle.setAttribute("aria-controls", "operations-dashboard");
     this.toggle.setAttribute("aria-expanded", "false");
-    this.toggle.innerHTML = `${icon("grid")}<span>Điều hành</span>`;
+    this.toggle.innerHTML = L("{0}<span>Điều hành</span>", icon("grid"));
     this.root.id = "operations-dashboard";
     this.root.className = "ops-shell";
     this.root.hidden = true;
     this.root.tabIndex = -1;
-    this.root.setAttribute("aria-label", "Điều hành AI Agent Company");
-    this.root.innerHTML = `<div class="ops-layout" data-side="none"><aside class="ops-side"><div class="ops-brand"><span class="ops-logo" aria-hidden="true">MS</span><div><strong>Trung tâm điều hành</strong><small>AI Agent Company</small></div></div>
-      <nav class="ops-nav" role="tablist" aria-orientation="vertical" aria-label="Các bảng điều hành">${TABS.map(([id, label, name]) => `<button type="button" role="tab" id="ops-tab-${id}" data-tab="${id}" aria-label="${label}" title="${label}" aria-selected="${id === this.tab}" aria-controls="ops-content" tabindex="${id === this.tab ? 0 : -1}">${icon(name)}<span class="ops-nav-label"${SHORT_LABELS[id] ? ` data-short="${SHORT_LABELS[id]}"` : ""}><span class="ops-nav-full">${label}</span></span><span class="ops-tab-count" data-count-for="${id}" hidden></span></button>`).join("")}</nav>
-      <p class="ops-status" role="status">Đang nối dữ liệu…</p></aside>
-      <div class="ops-main"><header class="ops-topbar"><div class="ops-topbar-title"><span class="ops-kicker">AI Agent Company</span><h1 data-slot="title">Tổng quan</h1></div><div class="ops-toolbar" data-filters="on"><label class="ops-filter"><span>Dự án</span><select data-filter="project" aria-label="Dự án"><option value="">Tất cả</option></select></label><label class="ops-effects" title="Pháo giấy khi một việc được xác nhận hoàn tất"><input type="checkbox" role="switch" aria-label="Hiệu ứng" data-action="effects" ${this.effects ? "checked" : ""}><span>Hiệu ứng</span></label><button type="button" data-action="toggle-replay" class="ops-history-toggle" aria-expanded="false">Xem lại</button><button type="button" data-action="refresh" class="ops-icon-button" aria-label="Làm mới dữ liệu" title="Làm mới">${icon("refresh")}</button><button type="button" data-action="close" class="ops-icon-button ops-close" aria-label="Đóng trung tâm điều hành" title="Đóng (Esc)"><span aria-hidden="true">×</span></button></div></header>
-      <div class="ops-date-controls" data-controls="replay" hidden><label>Từ (giờ Việt Nam)<input type="datetime-local" aria-label="Từ (giờ Việt Nam)" data-input="from" value="${dateInput(Date.now() - 3_600_000)}"></label><label>Đến (giờ Việt Nam)<input type="datetime-local" aria-label="Đến (giờ Việt Nam)" data-input="to" value="${dateInput(Date.now())}"></label><button type="button" data-action="load-replay">Xem lại văn phòng</button></div>
-      <p class="ops-notice" role="status" hidden></p><div id="ops-content" class="ops-content" role="tabpanel" aria-labelledby="ops-tab-overview" data-layout="overview" tabindex="0"></div></div></div>`;
+    this.root.setAttribute("aria-label", L("Điều hành AI Agent Company"));
+    this.root.innerHTML = L("<div class=\"ops-layout\" data-side=\"none\"><aside class=\"ops-side\"><div class=\"ops-brand\"><span class=\"ops-logo\" aria-hidden=\"true\">AI</span><div><strong>Trung tâm điều hành</strong><small>AI Agent Company</small></div></div>\n      <nav class=\"ops-nav\" role=\"tablist\" aria-orientation=\"vertical\" aria-label=\"Các bảng điều hành\">{0}</nav>\n      <p class=\"ops-status\" role=\"status\">Đang nối dữ liệu…</p></aside>\n      <div class=\"ops-main\"><header class=\"ops-topbar\"><div class=\"ops-topbar-title\"><span class=\"ops-kicker\">AI Agent Company</span><h1 data-slot=\"title\">Tổng quan</h1></div><div class=\"ops-toolbar\" data-filters=\"on\"><label class=\"ops-filter\"><span>Dự án</span><select data-filter=\"project\" aria-label=\"Dự án\"><option value=\"\">Tất cả</option></select></label><label class=\"ops-effects\" title=\"Pháo giấy khi một việc được xác nhận hoàn tất\"><input type=\"checkbox\" role=\"switch\" aria-label=\"Hiệu ứng\" data-action=\"effects\" {1}><span>Hiệu ứng</span></label><button type=\"button\" data-action=\"toggle-replay\" class=\"ops-history-toggle\" aria-expanded=\"false\">Xem lại</button><button type=\"button\" data-action=\"refresh\" class=\"ops-icon-button\" aria-label=\"Làm mới dữ liệu\" title=\"Làm mới\">{2}</button><button type=\"button\" data-action=\"close\" class=\"ops-icon-button ops-close\" aria-label=\"Đóng trung tâm điều hành\" title=\"Đóng (Esc)\"><span aria-hidden=\"true\">×</span></button></div></header>\n      <div class=\"ops-date-controls\" data-controls=\"replay\" hidden><label>Từ (giờ Việt Nam)<input type=\"datetime-local\" aria-label=\"Từ (giờ Việt Nam)\" data-input=\"from\" value=\"{3}\"></label><label>Đến (giờ Việt Nam)<input type=\"datetime-local\" aria-label=\"Đến (giờ Việt Nam)\" data-input=\"to\" value=\"{4}\"></label><button type=\"button\" data-action=\"load-replay\">Xem lại văn phòng</button></div>\n      <p class=\"ops-notice\" role=\"status\" hidden></p><div id=\"ops-content\" class=\"ops-content\" role=\"tabpanel\" aria-labelledby=\"ops-tab-overview\" data-layout=\"overview\" tabindex=\"0\"></div></div></div>", TABS.map(([id, label, name]) => `<button type="button" role="tab" id="ops-tab-${id}" data-tab="${id}" aria-label="${label}" title="${label}" aria-selected="${id === this.tab}" aria-controls="ops-content" tabindex="${id === this.tab ? 0 : -1}">${icon(name)}<span class="ops-nav-label"${SHORT_LABELS[id] ? ` data-short="${SHORT_LABELS[id]}"` : ""}><span class="ops-nav-full">${label}</span></span><span class="ops-tab-count" data-count-for="${id}" hidden></span></button>`).join(""), this.effects ? "checked" : "", icon("refresh"), dateInput(Date.now() - 3_600_000), dateInput(Date.now()));
     this.content = this.root.querySelector<HTMLDivElement>(".ops-content")!;
     this.status = this.root.querySelector(".ops-status")!;
     this.title = this.root.querySelector('[data-slot="title"]')!;
@@ -250,10 +246,18 @@ export class OperationsDashboard {
     this.projectSelect = this.root.querySelector('[data-filter="project"]')!;
     this.replayControls = this.root.querySelector('[data-controls="replay"]')!;
     this.toolbar = this.root.querySelector(".ops-toolbar")!;
+    const langButton = document.createElement("button");
+    langButton.type = "button";
+    langButton.className = "ops-icon-button ops-lang";
+    langButton.dataset.action = "lang";
+    langButton.textContent = getLang() === "en" ? "VI" : "EN";
+    langButton.title = L("Đổi ngôn ngữ");
+    langButton.setAttribute("aria-label", L("Đổi ngôn ngữ"));
+    this.toolbar.querySelector('[data-action="refresh"]')!.before(langButton);
     this.replayBar.className = "ops-replay-bar";
     this.replayBar.id = "operations-replay";
     this.replayBar.hidden = true;
-    this.replayBar.innerHTML = '<b>XEM LẠI</b><button type="button" data-action="play">Phát</button><label class="ops-scrub"><span class="ops-replay-time"></span><input type="range" min="0" max="0" value="0" aria-label="Thời điểm xem lại"></label><button type="button" data-action="live">Về trực tiếp</button>';
+    this.replayBar.innerHTML = L("<b>XEM LẠI</b><button type=\"button\" data-action=\"play\">Phát</button><label class=\"ops-scrub\"><span class=\"ops-replay-time\"></span><input type=\"range\" min=\"0\" max=\"0\" value=\"0\" aria-label=\"Thời điểm xem lại\"></label><button type=\"button\" data-action=\"live\">Về trực tiếp</button>");
     const controls = document.querySelector(".office-controls");
     if (controls) controls.prepend(this.toggle);
     else document.body.append(this.toggle);
@@ -383,14 +387,14 @@ export class OperationsDashboard {
     const key = projects.join("\n");
     if (this.projectSelect.dataset.key === key) return;
     const selected = this.projectSelect.value;
-    this.projectSelect.innerHTML = `<option value="">Tất cả</option>${projects.map((project) => `<option value="${text(project)}">${text(project)}</option>`).join("")}`;
+    this.projectSelect.innerHTML = L("<option value=\"\">Tất cả</option>{0}", projects.map((project) => `<option value="${text(project)}">${text(project)}</option>`).join(""));
     this.projectSelect.value = selected;
     this.projectSelect.dataset.key = key;
   }
 
   private async read<T>(endpoint: string, query?: URLSearchParams, timeout = 12_000): Promise<T> {
     const response = await fetch(`${endpoint}${query?.size ? `?${query}` : ""}`, { cache: "no-store", signal: AbortSignal.timeout(timeout) });
-    if (!response.ok) throw new Error(response.status === 401 ? "Phiên truy cập hết hạn. Tải lại trang để đăng nhập." : `Không đọc được dữ liệu (${response.status}).`);
+    if (!response.ok) throw new Error(response.status === 401 ? L("Phiên truy cập hết hạn. Tải lại trang để đăng nhập.") : L("Không đọc được dữ liệu ({0}).", response.status));
     return await response.json() as T;
   }
 
@@ -403,7 +407,7 @@ export class OperationsDashboard {
       this.error = "";
       this.updateFilters();
     } catch (error) {
-      this.error = error instanceof Error ? error.message : "Không nối được trung tâm điều hành.";
+      this.error = error instanceof Error ? error.message : L("Không nối được trung tâm điều hành.");
     } finally {
       this.operationsBusy = false;
       this.render();
@@ -424,7 +428,7 @@ export class OperationsDashboard {
       this.inboxError = "";
       this.callbacks.inbox?.(this.inbox);
     } catch (error) {
-      this.inboxError = error instanceof Error ? error.message : "Không đọc được Gmail & lịch.";
+      this.inboxError = error instanceof Error ? error.message : L("Không đọc được Gmail & lịch.");
     } finally {
       this.inboxBusy = false;
       this.render();
@@ -475,7 +479,7 @@ export class OperationsDashboard {
       this.system = await this.read<SystemReport>("/api/system");
       this.systemError = "";
     } catch (error) {
-      this.systemError = error instanceof Error ? error.message : "Không đọc được trạng thái hệ thống.";
+      this.systemError = error instanceof Error ? error.message : L("Không đọc được trạng thái hệ thống.");
     } finally {
       this.systemLoading = false;
       this.render();
@@ -491,7 +495,7 @@ export class OperationsDashboard {
       this.automation = await this.read<AutomationReport>("/api/automation");
       this.automationAt = Date.now();
     } catch (error) {
-      this.automationError = error instanceof Error ? error.message : "Không đọc được trạng thái tác vụ.";
+      this.automationError = error instanceof Error ? error.message : L("Không đọc được trạng thái tác vụ.");
     } finally {
       this.automationLoading = false;
       this.render();
@@ -505,13 +509,13 @@ export class OperationsDashboard {
     const fromMs = Date.parse(`${from}:00+07:00`);
     const toMs = Date.parse(`${to}:00+07:00`);
     if (!Number.isFinite(fromMs) || !Number.isFinite(toMs) || fromMs >= toMs || toMs - fromMs > 7 * 86_400_000) {
-      this.setNotice("Chọn thời gian bắt đầu trước kết thúc, tối đa 7 ngày.");
+      this.setNotice(L("Chọn thời gian bắt đầu trước kết thúc, tối đa 7 ngày."));
       return;
     }
     query.set("from", new Date(fromMs).toISOString());
     query.set("to", new Date(toMs).toISOString());
     const version = ++this.queryVersion;
-    this.setNotice("Đang nạp khung hình…");
+    this.setNotice(L("Đang nạp khung hình…"));
     try {
       const data = await this.read<ReplayResponse>("/api/replay", query);
       if (version !== this.queryVersion) return;
@@ -519,10 +523,10 @@ export class OperationsDashboard {
       this.replayData = data;
       if (data.frames.length) {
         this.showFrame(0);
-        this.setNotice(`Đã nạp ${data.frames.length} khung hình${data.truncated ? "; khoảng thời gian đã được giới hạn, chọn ngắn hơn để xem chi tiết" : ""}. Đóng bảng để xem văn phòng 3D.`);
-      } else this.setNotice("Chưa có khung hình trong khoảng đã chọn.");
+        this.setNotice(L("Đã nạp {0} khung hình{1}. Đóng bảng để xem văn phòng 3D.", data.frames.length, data.truncated ? L("; khoảng thời gian đã được giới hạn, chọn ngắn hơn để xem chi tiết") : ""));
+      } else this.setNotice(L("Chưa có khung hình trong khoảng đã chọn."));
     } catch (error) {
-      if (version === this.queryVersion) this.setNotice(error instanceof Error ? error.message : "Không đọc được khung hình.");
+      if (version === this.queryVersion) this.setNotice(error instanceof Error ? error.message : L("Không đọc được khung hình."));
     } finally {
       if (version === this.queryVersion) this.render();
     }
@@ -600,6 +604,7 @@ export class OperationsDashboard {
     }
     switch (target.dataset.action) {
       case "close": this.close(); break;
+      case "lang": storeLang(getLang() === "en" ? "vi" : "en"); location.reload(); break;
       case "compose":
         this.communications.openComposer();
         this.content.querySelector<HTMLElement>(".overview-communications")?.scrollIntoView({ block: "nearest" });
@@ -748,13 +753,13 @@ export class OperationsDashboard {
   private renderStatus(): void {
     const stale = !this.connected || !this.operations || Date.now() - Date.parse(this.operations.generatedAt) > 45_000;
     this.status.dataset.stale = String(stale);
-    this.status.textContent = this.error || (this.replayIndex >= 0 ? "Đang xem lại · Các bảng điều hành vẫn hiển thị dữ liệu trực tiếp" : stale ? "Đang chờ dữ liệu mới · Thông tin có thể đã cũ" : `Trực tiếp · Cập nhật ${time(this.operations!.generatedAt)} · Giờ Việt Nam`);
+    this.status.textContent = this.error || (this.replayIndex >= 0 ? L("Đang xem lại · Các bảng điều hành vẫn hiển thị dữ liệu trực tiếp") : stale ? L("Đang chờ dữ liệu mới · Thông tin có thể đã cũ") : L("Trực tiếp · Cập nhật {0} · Giờ Việt Nam", time(this.operations!.generatedAt)));
   }
 
   private render(): void {
     this.renderStatus();
     const count = this.github.count();
-    this.toggle.setAttribute("aria-label", `Mở trung tâm điều hành${count ? `, ${count} việc trên GitHub cần xem` : ""}`);
+    this.toggle.setAttribute("aria-label", L("Mở trung tâm điều hành{0}", count ? L(", {0} việc trên GitHub cần xem", count) : ""));
     this.renderTabCounts({ overview: this.reviewTasks().length, github: count, projects: this.todos.openCount(), mail: this.inboxUnread(), calendar: eventsToday(this.inbox, Date.now()), automation: this.systemError ? 0 : systemAlerts(this.system).reduce((sum, entry) => sum + entry.count, 0) });
     if (!this.opened) return;
     const communicationSnapshot = this.replayIndex >= 0 ? this.replayData?.frames[this.replayIndex]?.snapshot ?? this.snapshot : this.snapshot;
@@ -765,10 +770,10 @@ export class OperationsDashboard {
     else if (this.tab === "calendar") html = this.calendarMarkup();
     else if (this.tab === "projects") html = this.todos.markup();
     else if (this.tab === "quota") html = this.quotaMarkup();
-    else if (!this.snapshot) html = empty("Đang nối văn phòng", "Dữ liệu sẽ xuất hiện khi hub gửi bản cập nhật đầu tiên.");
+    else if (!this.snapshot) html = empty(L("Đang nối văn phòng"), L("Dữ liệu sẽ xuất hiện khi hub gửi bản cập nhật đầu tiên."));
     else if (this.tab === "overview") html = this.overviewMarkup();
     else if (this.tab === "automation") html = systemView({ report: this.system, loading: this.systemLoading, error: this.systemError, machine: this.automationMachine, section: this.systemSection, query: this.systemQuery, filter: this.systemFilter, allServices: this.systemAllServices, processes: this.systemProcesses, processQuery: this.systemProcessQuery, processLimit: this.systemProcessLimit, serviceLimit: this.systemServiceLimit, automation: { report: this.automation, loading: this.automationLoading, error: this.automationError, machine: this.automationMachine } });
-    else if (!this.operations) html = empty("Chưa đọc được dữ liệu điều hành", this.error || "Đang lấy dữ liệu từ hub…");
+    else if (!this.operations) html = empty(L("Chưa đọc được dữ liệu điều hành"), this.error || L("Đang lấy dữ liệu từ hub…"));
     if (html === this.signature || this.heldByPress()) return;
     this.signature = html;
     const scroll = this.content.scrollTop;
@@ -812,7 +817,7 @@ export class OperationsDashboard {
   }
 
   private inlineAnswer(agent: AgentInfo, online: boolean): string {
-    if (this.tab === "overview" && agent.id === this.askingId) return '<p class="ops-source-note">Câu hỏi của agent này đang hiện ở đầu trang.</p>';
+    if (this.tab === "overview" && agent.id === this.askingId) return L("<p class=\"ops-source-note\">Câu hỏi của agent này đang hiện ở đầu trang.</p>");
     return this.answerMarkup(agent, online);
   }
 
@@ -824,8 +829,8 @@ export class OperationsDashboard {
     const current = asking.find((agent) => agent.id === this.selected.overview) ?? asking[0];
     this.askingId = current.id;
     const online = this.snapshot?.machines.find((machine) => machine.id === current.machine)?.online === true;
-    const others = asking.length > 1 ? `<div class="overview-ask-switch" role="group" aria-label="Chọn câu hỏi">${asking.map((agent) => `<button type="button" data-select="${text(agent.id)}" data-key="ask-switch:${text(agent.id)}" aria-pressed="${agent.id === current.id}">${text(agent.project)}</button>`).join("")}</div>` : "";
-    return `<section class="overview-asks" aria-label="Câu hỏi đang chờ sếp"><header class="overview-ask-who"><strong>${text(current.project)}</strong><span>${text(current.task || current.title)}</span></header>${others}${this.answerMarkup(current, online)}</section>`;
+    const others = asking.length > 1 ? L("<div class=\"overview-ask-switch\" role=\"group\" aria-label=\"Chọn câu hỏi\">{0}</div>", asking.map((agent) => `<button type="button" data-select="${text(agent.id)}" data-key="ask-switch:${text(agent.id)}" aria-pressed="${agent.id === current.id}">${text(agent.project)}</button>`).join("")) : "";
+    return L("<section class=\"overview-asks\" aria-label=\"Câu hỏi đang chờ sếp\"><header class=\"overview-ask-who\"><strong>{0}</strong><span>{1}</span></header>{2}{3}</section>", text(current.project), text(current.task || current.title), others, this.answerMarkup(current, online));
   }
 
   answerSignature(agent: AgentInfo): string {
@@ -843,22 +848,22 @@ export class OperationsDashboard {
 
   private async verifyTask(id: string, outcomeAt: string): Promise<void> {
     if (this.verifying) return;
-    if (this.replayIndex >= 0) return this.setNotice("Về trực tiếp trước khi xác nhận nghiệm thu.");
+    if (this.replayIndex >= 0) return this.setNotice(L("Về trực tiếp trước khi xác nhận nghiệm thu."));
     const task = this.operations?.tasks.find((item) => item.id === id);
-    if (!task?.agent.outcome || task.agent.outcome.status !== "completed" || task.agent.outcome.at !== outcomeAt) return this.setNotice("Lượt làm việc đã thay đổi. Làm mới để kiểm tra lại.");
+    if (!task?.agent.outcome || task.agent.outcome.status !== "completed" || task.agent.outcome.at !== outcomeAt) return this.setNotice(L("Lượt làm việc đã thay đổi. Làm mới để kiểm tra lại."));
     const evidenceKey = `${id}:${outcomeAt}`;
     const evidence = this.evidence.get(evidenceKey)?.trim();
-    if (!evidence) return this.setNotice("Ghi kết quả kiểm tra hoặc liên kết bằng chứng trước khi xác nhận hoàn tất.");
+    if (!evidence) return this.setNotice(L("Ghi kết quả kiểm tra hoặc liên kết bằng chứng trước khi xác nhận hoàn tất."));
     this.verifying = id;
     this.render();
     try {
       const response = await fetch("/api/tasks/verify", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ agentId: id, outcomeAt, evidence }), signal: AbortSignal.timeout(12_000) });
-      if (!response.ok) throw new Error(response.status === 409 ? "Lượt làm việc đã thay đổi. Làm mới và kiểm tra kết quả hiện tại." : `Không lưu được xác nhận (${response.status}).`);
+      if (!response.ok) throw new Error(response.status === 409 ? L("Lượt làm việc đã thay đổi. Làm mới và kiểm tra kết quả hiện tại.") : L("Không lưu được xác nhận ({0}).", response.status));
       this.evidence.delete(evidenceKey);
-      this.setNotice("Đã lưu: sếp đã xác nhận hoàn tất. Đây là nghiệm thu công việc, không phải duyệt quyền của ứng dụng.");
+      this.setNotice(L("Đã lưu: sếp đã xác nhận hoàn tất. Đây là nghiệm thu công việc, không phải duyệt quyền của ứng dụng."));
       await this.refreshOperations();
     } catch (error) {
-      this.setNotice(error instanceof Error ? error.message : "Chưa xác nhận được kết quả. Kiểm tra lại trước khi thử lần nữa.");
+      this.setNotice(error instanceof Error ? error.message : L("Chưa xác nhận được kết quả. Kiểm tra lại trước khi thử lần nữa."));
     } finally {
       this.verifying = null;
       this.render();
@@ -870,16 +875,16 @@ export class OperationsDashboard {
     const current = this.snapshot?.agents.some((entry) => entry.id === agent.id);
     const state = online ? agent.state : "offline";
     const detail = evidence || agent.progress || agent.detail || "";
-    const chat = link(agent.nativeUrl, "Mở chat gốc").replace("<a ", `<a title="${text(CHAT_NOTE)}" aria-description="${text(CHAT_NOTE)}" `);
+    const chat = link(agent.nativeUrl, L("Mở chat gốc")).replace("<a ", `<a title="${text(CHAT_NOTE)}" aria-description="${text(CHAT_NOTE)}" `);
     const heading = pane ? `<h2 class="ops-view-title">${text(agent.task || agent.title)}</h2>` : `<h3 class="ops-title" title="${text(agent.task || agent.title)}">${text(agent.task || agent.title)}</h3>`;
-    return `<article class="${pane ? "ops-view" : "ops-card"} ops-agent" data-state="${state}"><div class="ops-card-top"><span class="ops-app" data-app="${agent.app}">${APP_NAMES[agent.app]}</span><span class="ops-state" data-state="${state}">${online ? STATE_NAMES[agent.state] : "Mất kết nối"}</span></div>${heading}<p class="ops-meta ops-where">${icon("project", "ops-icon ops-icon-sm")}<span>${text(agent.project)}</span><span class="ops-dot" aria-hidden="true">·</span>${icon("machine", "ops-icon ops-icon-sm")}<span>${text(agent.machine)}</span>${agent.branch ? `<code class="ops-branch">${text(agent.branch)}</code>` : ""}</p>${agent.pending && this.replayIndex >= 0 ? `<div class="ops-question"><b>Cần sếp trả lời</b><p>${text(agent.pending.question)}</p></div>` : ""}${this.inlineAnswer(agent, online === true)}${this.controls.markup(agent, this.replayIndex < 0)}${pane ? '<h3 class="ops-view-label">Tiến độ gần nhất</h3>' : ""}${this.detailMarkup(`${this.tab}:${agent.id}`, detail, !pane)}<footer><time datetime="${text(agent.updatedAt)}">Cập nhật ${time(agent.updatedAt)}</time><div class="ops-actions">${chat}${current ? `<button type="button" class="ops-primary" data-agent="${text(agent.id)}">Xem trong văn phòng</button>` : '<small class="ops-meta">Phiên đã kết thúc</small>'}</div></footer></article>`;
+    return L("<article class=\"{0} ops-agent\" data-state=\"{1}\"><div class=\"ops-card-top\"><span class=\"ops-app\" data-app=\"{2}\">{3}</span><span class=\"ops-state\" data-state=\"{4}\">{5}</span></div>{6}<p class=\"ops-meta ops-where\">{7}<span>{8}</span><span class=\"ops-dot\" aria-hidden=\"true\">·</span>{9}<span>{10}</span>{11}</p>{12}{13}{14}{15}{16}<footer><time datetime=\"{17}\">Cập nhật {18}</time><div class=\"ops-actions\">{19}{20}</div></footer></article>", pane ? "ops-view" : "ops-card", state, agent.app, APP_NAMES[agent.app], state, online ? STATE_NAMES[agent.state] : L("Mất kết nối"), heading, icon("project", "ops-icon ops-icon-sm"), text(agent.project), icon("machine", "ops-icon ops-icon-sm"), text(agent.machine), agent.branch ? `<code class="ops-branch">${text(agent.branch)}</code>` : "", agent.pending && this.replayIndex >= 0 ? L("<div class=\"ops-question\"><b>Cần sếp trả lời</b><p>{0}</p></div>", text(agent.pending.question)) : "", this.inlineAnswer(agent, online === true), this.controls.markup(agent, this.replayIndex < 0), pane ? L("<h3 class=\"ops-view-label\">Tiến độ gần nhất</h3>") : "", this.detailMarkup(`${this.tab}:${agent.id}`, detail, !pane), text(agent.updatedAt), time(agent.updatedAt), chat, current ? L("<button type=\"button\" class=\"ops-primary\" data-agent=\"{0}\">Xem trong văn phòng</button>", text(agent.id)) : L("<small class=\"ops-meta\">Phiên đã kết thúc</small>"));
   }
 
   private detailMarkup(id: string, detail: string, clamp = true): string {
-    if (!detail.trim()) return '<p class="ops-detail ops-muted">Chưa có hoạt động</p>';
+    if (!detail.trim()) return L("<p class=\"ops-detail ops-muted\">Chưa có hoạt động</p>");
     const long = clamp && (detail.length > LONG_DETAIL || detail.split("\n").length > 5);
     const open = this.expanded.has(id);
-    return `<div class="ops-detail ops-md" data-clamped="${long && !open}">${renderMarkdown(readable(detail))}</div>${long ? `<button type="button" class="ops-more" data-expand="${text(id)}" data-key="expand:${text(id)}" aria-expanded="${open}">${open ? "Thu gọn" : "Xem thêm"}</button>` : ""}`;
+    return `<div class="ops-detail ops-md" data-clamped="${long && !open}">${renderMarkdown(readable(detail))}</div>${long ? `<button type="button" class="ops-more" data-expand="${text(id)}" data-key="expand:${text(id)}" aria-expanded="${open}">${open ? L("Thu gọn") : L("Xem thêm")}</button>` : ""}`;
   }
 
   private select(id: string): void {
@@ -897,13 +902,13 @@ export class OperationsDashboard {
     const current = items.find((item) => key(item) === this.selected[this.tab]) ?? items[0];
     this.selected[this.tab] = key(current);
     const list = groups.filter(([, list]) => list.length).map(([title, list]) => `<div class="ops-group" role="group" aria-label="${text(title)}"><h3>${head ? head(title, list) : `${text(title)}<span>${list.length}</span>`}</h3>${list.map((item) => row(item, item === current)).join("")}</div>`).join("");
-    return `<div class="ops-split" data-detail="${this.detailOpen}"><div class="ops-list" aria-label="${text(label)}">${list}${footer}</div><section class="ops-pane" aria-label="Chi tiết"><button type="button" class="ops-back" data-action="back">${icon("back")}<span>Quay lại danh sách</span></button>${pane(current)}</section></div>`;
+    return L("<div class=\"ops-split\" data-detail=\"{0}\"><div class=\"ops-list\" aria-label=\"{1}\">{2}{3}</div><section class=\"ops-pane\" aria-label=\"Chi tiết\"><button type=\"button\" class=\"ops-back\" data-action=\"back\">{4}<span>Quay lại danh sách</span></button>{5}</section></div>", this.detailOpen, text(label), list, footer, icon("back"), pane(current));
   }
 
   private agentRow(agent: AgentInfo, active: boolean): string {
     const online = this.snapshot?.machines.find((machine) => machine.id === agent.machine)?.online;
     const state = online ? agent.state : "offline";
-    const side = agent.pending ? '<span class="ops-pill" data-tone="amber">Chờ trả lời</span>' : `<span class="ops-row-state" data-state="${state}">${online ? STATE_NAMES[agent.state] : "Mất kết nối"}</span>`;
+    const side = agent.pending ? L("<span class=\"ops-pill\" data-tone=\"amber\">Chờ trả lời</span>") : `<span class="ops-row-state" data-state="${state}">${online ? STATE_NAMES[agent.state] : L("Mất kết nối")}</span>`;
     return `<button type="button" class="ops-row" data-select="${text(agent.id)}" data-key="row:${text(agent.id)}" aria-current="${active}"><span class="ops-led" data-state="${state}" aria-hidden="true"></span><span class="ops-row-main"><span class="ops-row-title">${text(agent.task || agent.title)}</span><span class="ops-row-meta"><b data-app="${agent.app}">${APP_NAMES[agent.app]}</b> · ${text(agent.project)} · ${text(agent.machine)}</span></span><span class="ops-row-side"><time datetime="${text(agent.updatedAt)}">${ago(agent.updatedAt)}</time>${side}</span></button>`;
   }
 
@@ -912,7 +917,7 @@ export class OperationsDashboard {
     const active = agents.filter((agent) => online.has(agent.machine) && ["working", "thinking"].includes(agent.state)).length;
     const waiting = agents.filter((agent) => online.has(agent.machine) && (agent.pending || agent.state === "waiting")).length;
     const reviews = this.reviewTasks().length;
-    return `<div class="ops-kpis"><div class="ops-kpi" data-tone="${active ? "green" : "neutral"}"><strong>${active}</strong><span>Đang làm<small>Agent đang hoạt động</small></span></div><div class="ops-kpi" data-tone="${waiting ? "amber" : "neutral"}"><strong>${waiting}</strong><span>Chờ sếp<small>Cần trả lời hoặc quyết định</small></span></div><div class="ops-kpi" data-tone="${reviews ? "violet" : "neutral"}"><strong>${reviews}</strong><span>Cần nghiệm thu<small>Chưa xác nhận hoàn tất</small></span></div><button type="button" class="ops-kpi" data-action="github" data-tone="${attention ? "amber" : "neutral"}"><strong>${attention}</strong><span>GitHub<small>Mở các việc cần xem →</small></span></button></div>`;
+    return L("<div class=\"ops-kpis\"><div class=\"ops-kpi\" data-tone=\"{0}\"><strong>{1}</strong><span>Đang làm<small>Agent đang hoạt động</small></span></div><div class=\"ops-kpi\" data-tone=\"{2}\"><strong>{3}</strong><span>Chờ sếp<small>Cần trả lời hoặc quyết định</small></span></div><div class=\"ops-kpi\" data-tone=\"{4}\"><strong>{5}</strong><span>Cần nghiệm thu<small>Chưa xác nhận hoàn tất</small></span></div><button type=\"button\" class=\"ops-kpi\" data-action=\"github\" data-tone=\"{6}\"><strong>{7}</strong><span>GitHub<small>Mở các việc cần xem →</small></span></button></div>", active ? "green" : "neutral", active, waiting ? "amber" : "neutral", waiting, reviews ? "violet" : "neutral", reviews, attention ? "amber" : "neutral", attention);
   }
 
   private reviewTasks(): TaskCard[] {
@@ -939,7 +944,7 @@ export class OperationsDashboard {
     const waiting = rest.filter((agent) => agent.pending || agent.state === "waiting" || this.replies.hasQuestion(agent.id));
     const active = rest.filter((agent) => !waiting.includes(agent) && ["working", "thinking"].includes(agent.state));
     const idle = rest.filter((agent) => !waiting.includes(agent) && !active.includes(agent));
-    const groups: [string, AgentInfo[]][] = [["Cần nghiệm thu", reviews.map((task) => task.agent)], ["Cần kiểm tra", flagged], ["Chờ sếp", waiting], ["Đang làm", active], ["Rảnh", idle]];
+    const groups: [string, AgentInfo[]][] = [[L("Cần nghiệm thu"), reviews.map((task) => task.agent)], [L("Cần kiểm tra"), flagged], [L("Chờ sếp"), waiting], [L("Đang làm"), active], [L("Rảnh"), idle]];
     const asks = this.askingMarkup(agents);
     const pane = (agent: AgentInfo) => {
       const task = reviews.find((entry) => entry.agent.id === agent.id);
@@ -947,16 +952,16 @@ export class OperationsDashboard {
       return `${(alerts.get(agent.id) ?? []).map((item) => this.attentionCard(item)).join("")}${this.agentMarkup(agent, undefined, true)}`;
     };
     const footer = this.operations ? coverage(this.operations.coverage) : "";
-    const body = groups.some(([, list]) => list.length) ? this.split("Danh sách agent", groups, (agent) => agent.id, (agent, current) => this.agentRow(agent, current), pane) : empty("Chưa có agent nào", "Agent đang chạy trên các máy sẽ hiện tại đây.");
+    const body = groups.some(([, list]) => list.length) ? this.split(L("Danh sách agent"), groups, (agent) => agent.id, (agent, current) => this.agentRow(agent, current), pane) : empty(L("Chưa có agent nào"), L("Agent đang chạy trên các máy sẽ hiện tại đây."));
     const priority = reviews.length + flagged.length + waiting.length;
     const projects = new Set(agents.map((agent) => agent.project)).size;
-    return `<div class="overview-board"><header class="overview-heading"><div><h2>Điều hành công việc</h2><p>${priority ? `${priority} việc cần sếp xem · ` : ""}${agents.length} agent trên ${projects} dự án</p></div><button type="button" class="ops-primary" data-action="compose" data-key="overview-compose" ${this.replayIndex >= 0 ? "disabled" : ""}>${icon("send")}Giao việc</button></header>${asks}${this.kpis(agents, attention)}<section class="overview-machines" aria-label="Kết nối ba máy">${this.communications.machineMarkup()}</section>${this.systemError || this.replayIndex >= 0 ? "" : systemOverview(this.system)}<div class="overview-columns"><section class="overview-workspace" aria-labelledby="overview-agents-title"><header class="overview-section-heading"><div><h2 id="overview-agents-title">Agent & nghiệm thu</h2><p>Ưu tiên việc chờ xử lý, rồi đến các phiên đang làm.</p></div><span class="overview-total">${agents.length} agent</span></header>${body}</section><aside class="overview-communications" aria-label="Giao tiếp và giao việc">${this.communications.markup(true)}</aside></div><footer class="overview-footnote">${footer}</footer></div>`;
+    return L("<div class=\"overview-board\"><header class=\"overview-heading\"><div><h2>Điều hành công việc</h2><p>{0}{1} agent trên {2} dự án</p></div><button type=\"button\" class=\"ops-primary\" data-action=\"compose\" data-key=\"overview-compose\" {3}>{4}Giao việc</button></header>{5}{6}<section class=\"overview-machines\" aria-label=\"Kết nối ba máy\">{7}</section>{8}<div class=\"overview-columns\"><section class=\"overview-workspace\" aria-labelledby=\"overview-agents-title\"><header class=\"overview-section-heading\"><div><h2 id=\"overview-agents-title\">Agent & nghiệm thu</h2><p>Ưu tiên việc chờ xử lý, rồi đến các phiên đang làm.</p></div><span class=\"overview-total\">{9} agent</span></header>{10}</section><aside class=\"overview-communications\" aria-label=\"Giao tiếp và giao việc\">{11}</aside></div><footer class=\"overview-footnote\">{12}</footer></div>", priority ? L("{0} việc cần sếp xem · ", priority) : "", agents.length, projects, this.replayIndex >= 0 ? "disabled" : "", icon("send"), asks, this.kpis(agents, attention), this.communications.machineMarkup(), this.systemError || this.replayIndex >= 0 ? "" : systemOverview(this.system), agents.length, body, this.communications.markup(true), footer);
   }
 
   private attentionCard(item: AttentionItem, pane = false): string {
     const agent = item.kind === "question" ? this.snapshot?.agents.find((entry) => item.agentIds.includes(entry.id)) : null;
     const heading = pane ? `<h2 class="ops-view-title">${text(item.title)}</h2>` : `<h3 class="ops-title">${text(item.title)}</h3>`;
-    return `<article class="${pane ? "ops-view" : "ops-card"} ops-attention" data-severity="${item.severity}"><div class="ops-card-top"><span class="ops-category">${KIND_NAMES[item.kind]}</span><span class="ops-state" data-state="${item.severity === "error" ? "offline" : "waiting"}">${item.severity === "error" ? "Nghiêm trọng" : "Cần xem"}</span></div>${heading}<p class="ops-meta">${text([item.project, item.machine].filter(Boolean).join(" · "))}</p>${this.detailMarkup(`${this.tab}:attention:${item.id}`, item.detail, !pane)}${agent ? this.inlineAnswer(agent, this.snapshot?.machines.find((machine) => machine.id === agent.machine)?.online === true) : ""}<footer><time datetime="${text(item.since)}">${waited(item.since)}</time><div class="ops-actions">${link(item.url, "Mở nguồn")}${item.agentIds.map((id, index) => `<button type="button" class="ops-primary" data-agent="${text(id)}">${item.agentIds.length > 1 ? `Xem agent ${index + 1}` : "Xem trong văn phòng"}</button>`).join("")}</div></footer>${item.kind === "question" ? '<small class="ops-source-note">Câu hỏi tự biến mất khi nguồn xác nhận đã trả lời. Liên kết chat mở ứng dụng trên thiết bị đang xem.</small>' : ""}</article>`;
+    return `<article class="${pane ? "ops-view" : "ops-card"} ops-attention" data-severity="${item.severity}"><div class="ops-card-top"><span class="ops-category">${KIND_NAMES[item.kind]}</span><span class="ops-state" data-state="${item.severity === "error" ? "offline" : "waiting"}">${item.severity === "error" ? L("Nghiêm trọng") : L("Cần xem")}</span></div>${heading}<p class="ops-meta">${text([item.project, item.machine].filter(Boolean).join(" · "))}</p>${this.detailMarkup(`${this.tab}:attention:${item.id}`, item.detail, !pane)}${agent ? this.inlineAnswer(agent, this.snapshot?.machines.find((machine) => machine.id === agent.machine)?.online === true) : ""}<footer><time datetime="${text(item.since)}">${waited(item.since)}</time><div class="ops-actions">${link(item.url, L("Mở nguồn"))}${item.agentIds.map((id, index) => `<button type="button" class="ops-primary" data-agent="${text(id)}">${item.agentIds.length > 1 ? `Xem agent ${index + 1}` : L("Xem trong văn phòng")}</button>`).join("")}</div></footer>${item.kind === "question" ? L("<small class=\"ops-source-note\">Câu hỏi tự biến mất khi nguồn xác nhận đã trả lời. Liên kết chat mở ứng dụng trên thiết bị đang xem.</small>") : ""}</article>`;
   }
 
   private githubMarkup(): string {
@@ -966,14 +971,14 @@ export class OperationsDashboard {
     const match = (item: GitItem) => !this.projectSelect.value || item.project === this.projectSelect.value;
     const groups = this.github.groups(match);
     const summary = this.github.summary(match);
-    if (!groups.some(([, list]) => list.length)) return `${summary}${empty("GitHub đang sạch", "Không có CI lỗi, pull request, issue, cảnh báo bảo mật hay thông báo chưa đọc.")}`;
+    if (!groups.some(([, list]) => list.length)) return `${summary}${empty(L("GitHub đang sạch"), L("Không có CI lỗi, pull request, issue, cảnh báo bảo mật hay thông báo chưa đọc."))}`;
     return `${summary}${this.github.board(match, now)}`;
   }
 
   private taskMarkup(task: TaskCard): string {
     const evidenceKey = `${task.id}:${task.agent.outcome?.at ?? ""}`;
-    const verify = this.tab === "overview" && this.replayIndex < 0 && task.stage === "review" && task.agent.outcome?.status === "completed" && task.online ? `<div class="ops-verify"><label>Bằng chứng nghiệm thu<textarea aria-label="Bằng chứng nghiệm thu" maxlength="1000" rows="2" data-key="evidence:${text(evidenceKey)}" data-evidence="${text(evidenceKey)}" placeholder="Kết quả kiểm thử, liên kết hoặc nội dung sếp đã kiểm tra…">${text(this.evidence.get(evidenceKey) ?? "")}</textarea></label><button type="button" data-verify="${text(task.id)}" data-outcome="${text(task.agent.outcome.at)}" data-key="verify:${text(evidenceKey)}" ${this.verifying ? "disabled" : ""}>${this.verifying === task.id ? "Đang lưu…" : "Xác nhận hoàn tất"}</button></div>` : task.stage === "completed" ? '<p class="ops-verified">Sếp đã xác nhận hoàn tất</p>' : "";
-    return `${this.agentMarkup(task.agent, task.evidence).replace('class="ops-card ops-agent"', 'class="ops-card ops-agent ops-task"').replace("</article>", `${verify}</article>`)}${task.inferred ? '<small class="ops-inferred">Phân loại theo hoạt động đang quan sát</small>' : ""}`;
+    const verify = this.tab === "overview" && this.replayIndex < 0 && task.stage === "review" && task.agent.outcome?.status === "completed" && task.online ? L("<div class=\"ops-verify\"><label>Bằng chứng nghiệm thu<textarea aria-label=\"Bằng chứng nghiệm thu\" maxlength=\"1000\" rows=\"2\" data-key=\"evidence:{0}\" data-evidence=\"{1}\" placeholder=\"Kết quả kiểm thử, liên kết hoặc nội dung sếp đã kiểm tra…\">{2}</textarea></label><button type=\"button\" data-verify=\"{3}\" data-outcome=\"{4}\" data-key=\"verify:{5}\" {6}>{7}</button></div>", text(evidenceKey), text(evidenceKey), text(this.evidence.get(evidenceKey) ?? ""), text(task.id), text(task.agent.outcome.at), text(evidenceKey), this.verifying ? "disabled" : "", this.verifying === task.id ? L("Đang lưu…") : L("Xác nhận hoàn tất")) : task.stage === "completed" ? L("<p class=\"ops-verified\">Sếp đã xác nhận hoàn tất</p>") : "";
+    return `${this.agentMarkup(task.agent, task.evidence).replace('class="ops-card ops-agent"', 'class="ops-card ops-agent ops-task"').replace("</article>", `${verify}</article>`)}${task.inferred ? L("<small class=\"ops-inferred\">Phân loại theo hoạt động đang quan sát</small>") : ""}`;
   }
 
 
@@ -984,7 +989,7 @@ export class OperationsDashboard {
 
 
   private mailMarkup(): string {
-    if (!this.inbox) return empty("Đang đọc Gmail", this.inboxError || "Đang tải hộp thư từ hub…");
+    if (!this.inbox) return empty(L("Đang đọc Gmail"), this.inboxError || L("Đang tải hộp thư từ hub…"));
     return mailView(this.inbox, this.mailbox, Date.now(), this.reader);
   }
 
@@ -996,20 +1001,20 @@ export class OperationsDashboard {
     let error = "";
     try {
       const response = await fetch(`/api/mail?id=${encodeURIComponent(reader.id)}`, { method: "DELETE", signal: AbortSignal.timeout(30_000) });
-      if (!response.ok) error = response.status === 401 ? "Phiên truy cập hết hạn. Tải lại trang để đăng nhập." : ((await response.json().catch(() => null)) as { error?: string } | null)?.error ?? `Lỗi ${response.status}.`;
+      if (!response.ok) error = response.status === 401 ? L("Phiên truy cập hết hạn. Tải lại trang để đăng nhập.") : ((await response.json().catch(() => null)) as { error?: string } | null)?.error ?? L("Lỗi {0}.", response.status);
     } catch {
-      error = "Hub không trả lời kịp. Thử lại sau.";
+      error = L("Hub không trả lời kịp. Thử lại sau.");
     }
     if (this.reader?.id !== reader.id) return;
     if (error) {
       this.reader = { ...reader, deleting: false };
-      this.setNotice(`Chưa xóa được thư: ${error}`);
+      this.setNotice(L("Chưa xóa được thư: {0}", error));
       this.render();
       return;
     }
     if (this.inbox) this.inbox = { ...this.inbox, accounts: this.inbox.accounts.map((account) => ({ ...account, recent: account.recent.filter((message) => message.id !== reader.id), labels: account.labels?.map((label) => ({ ...label, recent: label.recent.filter((message) => message.id !== reader.id) })) })) };
     this.reader = null;
-    this.setNotice("Đã chuyển thư vào Thùng rác của Gmail.");
+    this.setNotice(L("Đã chuyển thư vào Thùng rác của Gmail."));
     this.render();
     setTimeout(() => this.setNotice(""), 6000);
   }
@@ -1034,9 +1039,9 @@ export class OperationsDashboard {
     try {
       const response = await fetch(`/api/mail?id=${encodeURIComponent(id)}`, { cache: "no-store", signal: AbortSignal.timeout(30_000) });
       if (response.ok) mail = await response.json() as MailContent;
-      else error = response.status === 401 ? "Phiên truy cập hết hạn. Tải lại trang để đăng nhập." : ((await response.json().catch(() => null)) as { error?: string } | null)?.error ?? `Lỗi ${response.status}.`;
+      else error = response.status === 401 ? L("Phiên truy cập hết hạn. Tải lại trang để đăng nhập.") : ((await response.json().catch(() => null)) as { error?: string } | null)?.error ?? L("Lỗi {0}.", response.status);
     } catch {
-      error = "Hub không trả lời kịp. Thử lại sau.";
+      error = L("Hub không trả lời kịp. Thử lại sau.");
     }
     if (this.reader?.id !== id) return;
     this.reader = { ...this.reader, mail, error };
@@ -1065,10 +1070,10 @@ export class OperationsDashboard {
     try {
       const response = await fetch(target, { method, headers: body ? { "content-type": "application/json" } : undefined, body: body ? JSON.stringify(body) : undefined, signal: AbortSignal.timeout(15_000) });
       if (response.ok) return "";
-      if (response.status === 401) return "Phiên truy cập hết hạn. Tải lại trang để đăng nhập.";
-      return ((await response.json().catch(() => null)) as { error?: string } | null)?.error ?? `Lỗi ${response.status}.`;
+      if (response.status === 401) return L("Phiên truy cập hết hạn. Tải lại trang để đăng nhập.");
+      return ((await response.json().catch(() => null)) as { error?: string } | null)?.error ?? L("Lỗi {0}.", response.status);
     } catch {
-      return "Hub không trả lời kịp. Thử lại sau.";
+      return L("Hub không trả lời kịp. Thử lại sau.");
     }
   }
 
@@ -1092,7 +1097,7 @@ export class OperationsDashboard {
 
   private async deleteEvent(): Promise<void> {
     const event = this.currentEvents().find((entry) => entry.id === this.calendarEvent);
-    if (!event?.local || !window.confirm(`Xóa sự kiện “${event.title}”?`)) return;
+    if (!event?.local || !window.confirm(L("Xóa sự kiện “{0}”?", event.title))) return;
     const error = await this.writeEvent("DELETE", event.id);
     if (error) { window.alert(error); return; }
     this.calendarEvent = null;
@@ -1126,11 +1131,11 @@ export class OperationsDashboard {
     this.render();
     try {
       const response = await fetch(`/api/calendar?from=${range.from}&to=${range.to}`, { cache: "no-store", signal: AbortSignal.timeout(30_000) });
-      if (!response.ok) throw new Error(response.status === 401 ? "Phiên truy cập hết hạn. Tải lại trang để đăng nhập." : `Không tải được lịch (${response.status}).`);
+      if (!response.ok) throw new Error(response.status === 401 ? L("Phiên truy cập hết hạn. Tải lại trang để đăng nhập.") : L("Không tải được lịch ({0}).", response.status));
       const body = await response.json() as { events: CalendarEvent[] };
       this.calendarData.set(key, { at: Date.now(), events: body.events });
     } catch (error) {
-      if (this.calendarKey() === key) this.calendarError = error instanceof Error && error.name !== "TimeoutError" ? error.message : "Hub không trả lời kịp.";
+      if (this.calendarKey() === key) this.calendarError = error instanceof Error && error.name !== "TimeoutError" ? error.message : L("Hub không trả lời kịp.");
     } finally {
       if (this.calendarLoading === key) this.calendarLoading = "";
       this.render();
@@ -1138,7 +1143,7 @@ export class OperationsDashboard {
   }
 
   private calendarMarkup(): string {
-    if (!this.inbox) return empty("Đang đọc Google Calendar", this.inboxError || "Đang tải lịch từ hub…");
+    if (!this.inbox) return empty(L("Đang đọc Google Calendar"), this.inboxError || L("Đang tải lịch từ hub…"));
     const key = this.calendarKey();
     return calendarView(this.inbox, Date.now(), { mode: this.calendarMode, anchor: this.calendarAnchor, events: this.calendarData.get(key)?.events ?? null, loading: this.calendarLoading === key, error: this.calendarError, selected: this.calendarEvent, form: this.calendarForm, saving: this.calendarSaving, formError: this.calendarFormError });
   }
@@ -1162,14 +1167,14 @@ export class OperationsDashboard {
   private pause(): void {
     clearInterval(this.playback);
     this.playback = 0;
-    this.replayBar.querySelector('[data-action="play"]')!.textContent = "Phát";
+    this.replayBar.querySelector('[data-action="play"]')!.textContent = L("Phát");
   }
 
   private togglePlayback(): void {
     if (this.playback) return this.pause();
     if (!this.replayData?.frames.length) return;
     if (this.replayIndex >= this.replayData.frames.length - 1) this.showFrame(0);
-    this.replayBar.querySelector('[data-action="play"]')!.textContent = "Tạm dừng";
+    this.replayBar.querySelector('[data-action="play"]')!.textContent = L("Tạm dừng");
     this.playback = window.setInterval(() => {
       if (this.replayIndex >= this.replayData!.frames.length - 1) return this.pause();
       this.showFrame(this.replayIndex + 1);

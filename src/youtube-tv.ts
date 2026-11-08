@@ -1,3 +1,4 @@
+import { L, locale } from "../shared/i18n.ts";
 import "./youtube-tv.css";
 import { PlayerControls, type ControlPlayer, type VideoInfo } from "./youtube-controls.ts";
 import { formatDuration, type YouTubeFeed, type YtChannel, type YtFeedKind, type YtFeedResult, type YtPlaylist, type YtStatus, type YtVideo } from "../shared/youtube.ts";
@@ -9,7 +10,7 @@ const MINI_WIDTH = 600;
 const MINI_MARGIN = 36;
 const MINI_BAR = 108;
 const GUIDE_CHANNELS = 7;
-const CHIPS: [string, string][] = [["", "Tất cả"], ["10", "Âm nhạc"], ["20", "Trò chơi"], ["24", "Giải trí"], ["17", "Thể thao"], ["0", "Thịnh hành"]];
+const CHIPS: [string, string][] = [["", L("Tất cả")], ["10", L("Âm nhạc")], ["20", L("Trò chơi")], ["24", L("Giải trí")], ["17", L("Thể thao")], ["0", L("Thịnh hành")]];
 const API_SRC = "https://www.youtube.com/iframe_api";
 const PLAYER_HOST = "https://www.youtube-nocookie.com";
 const STATUS_POLL_MS = 3_000;
@@ -76,7 +77,7 @@ function loadApi(): Promise<YtNamespace> {
     script.async = true;
     script.onerror = () => {
       apiPromise = null;
-      reject(new Error("Không tải được trình phát YouTube."));
+      reject(new Error(L("Không tải được trình phát YouTube.")));
     };
     document.head.append(script);
   });
@@ -85,7 +86,7 @@ function loadApi(): Promise<YtNamespace> {
 
 const esc = (text: string) => text.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
 const icon = (d: string) => `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="${d}"/></svg>`;
-const compact = new Intl.NumberFormat("vi-VN", { notation: "compact", maximumFractionDigits: 1 });
+const compact = new Intl.NumberFormat(locale(), { notation: "compact", maximumFractionDigits: 1 });
 const relative = new Intl.RelativeTimeFormat("vi", { numeric: "always" });
 const AGES: [number, Intl.RelativeTimeFormatUnit][] = [[31_536_000, "year"], [2_592_000, "month"], [604_800, "week"], [86_400, "day"], [3_600, "hour"], [60, "minute"]];
 
@@ -98,12 +99,12 @@ function ago(iso: string): string {
 
 function stats(video: YtVideo): string {
   const count = video.views !== null ? compact.format(video.views) : "";
-  const views = !count ? "" : video.live ? `${count} người đang xem` : `${count} lượt xem`;
+  const views = !count ? "" : video.live ? L("{0} người đang xem", count) : L("{0} lượt xem", count);
   return [views, !video.live && video.published ? ago(video.published) : ""].filter(Boolean).join(" • ");
 }
 
 function badge(video: YtVideo): string {
-  if (video.live) return '<span class="yt-badge yt-live">TRỰC TIẾP</span>';
+  if (video.live) return L("<span class=\"yt-badge yt-live\">TRỰC TIẾP</span>");
   return video.durationSec ? `<span class="yt-badge">${formatDuration(video.durationSec)}</span>` : "";
 }
 
@@ -146,7 +147,7 @@ function channelTile(channel: YtChannel): string {
 }
 
 function playlistTile(playlist: YtPlaylist): string {
-  return `<button type="button" class="yt-playlist-tile" data-playlist="${esc(playlist.id)}"><span class="yt-thumb yt-stack"><img src="${esc(playlist.thumbnail)}" alt="" loading="lazy"><span class="yt-badge">${icon(PATH.playlists)}${playlist.count} video</span></span><strong>${esc(playlist.title)}</strong><span class="yt-stats">Xem toàn bộ danh sách phát</span></button>`;
+  return L("<button type=\"button\" class=\"yt-playlist-tile\" data-playlist=\"{0}\"><span class=\"yt-thumb yt-stack\"><img src=\"{1}\" alt=\"\" loading=\"lazy\"><span class=\"yt-badge\">{2}{3} video</span></span><strong>{4}</strong><span class=\"yt-stats\">Xem toàn bộ danh sách phát</span></button>", esc(playlist.id), esc(playlist.thumbnail), icon(PATH.playlists), playlist.count, esc(playlist.title));
 }
 
 export class YouTubeTv {
@@ -172,31 +173,7 @@ export class YouTubeTv {
     this.onFocus = onFocus;
     this.element.className = "yt-tv";
     this.element.setAttribute("aria-label", "YouTube");
-    this.element.innerHTML = `
-      <header class="yt-masthead">
-        <div class="yt-start">
-          <button type="button" class="yt-icon-btn" data-act="guide" aria-label="Hướng dẫn">${icon(PATH.menu)}</button>
-          <button type="button" class="yt-logo" data-nav="home" aria-label="Trang chủ YouTube"><span class="yt-logo-mark" aria-hidden="true"></span><span class="yt-logo-word">YouTube</span><span class="yt-logo-premium">Premium</span><sup>VN</sup></button>
-        </div>
-        <form class="yt-search" role="search"><input name="q" type="search" placeholder="Tìm kiếm" aria-label="Tìm kiếm" autocomplete="off"><button type="submit" aria-label="Tìm kiếm">${icon(PATH.search)}</button></form>
-        <div class="yt-end">
-          <button type="button" class="yt-icon-btn" data-act="focus" aria-label="Phóng to màn YouTube" title="Phóng to màn YouTube">${icon(PATH.fit)}</button>
-          <div class="yt-me" data-yt="me"></div>
-        </div>
-      </header>
-      <div class="yt-page">
-        <nav class="yt-guide" aria-label="Hướng dẫn" data-yt="guide"></nav>
-        <main class="yt-browse" data-yt="content" tabindex="-1"></main>
-      </div>
-      <div class="yt-player" data-mode="browse">
-        <div class="yt-player-host"></div>
-        <button type="button" class="yt-mini-hit" data-act="expand" aria-label="Mở lớn trình phát"></button>
-      </div>
-      <div class="yt-mini-bar" hidden>
-        <div class="yt-mini-text"><strong data-yt="mini-title"></strong><span data-yt="mini-channel"></span></div>
-        <button type="button" class="yt-icon-btn" data-act="toggle" aria-label="Phát hoặc tạm dừng" data-yt="mini-toggle">${icon(PATH.pause)}</button>
-        <button type="button" class="yt-icon-btn" data-act="close" aria-label="Đóng trình phát">${icon(PATH.close)}</button>
-      </div>`;
+    this.element.innerHTML = L("\n      <header class=\"yt-masthead\">\n        <div class=\"yt-start\">\n          <button type=\"button\" class=\"yt-icon-btn\" data-act=\"guide\" aria-label=\"Hướng dẫn\">{0}</button>\n          <button type=\"button\" class=\"yt-logo\" data-nav=\"home\" aria-label=\"Trang chủ YouTube\"><span class=\"yt-logo-mark\" aria-hidden=\"true\"></span><span class=\"yt-logo-word\">YouTube</span><span class=\"yt-logo-premium\">Premium</span><sup>VN</sup></button>\n        </div>\n        <form class=\"yt-search\" role=\"search\"><input name=\"q\" type=\"search\" placeholder=\"Tìm kiếm\" aria-label=\"Tìm kiếm\" autocomplete=\"off\"><button type=\"submit\" aria-label=\"Tìm kiếm\">{1}</button></form>\n        <div class=\"yt-end\">\n          <button type=\"button\" class=\"yt-icon-btn\" data-act=\"focus\" aria-label=\"Phóng to màn YouTube\" title=\"Phóng to màn YouTube\">{2}</button>\n          <div class=\"yt-me\" data-yt=\"me\"></div>\n        </div>\n      </header>\n      <div class=\"yt-page\">\n        <nav class=\"yt-guide\" aria-label=\"Hướng dẫn\" data-yt=\"guide\"></nav>\n        <main class=\"yt-browse\" data-yt=\"content\" tabindex=\"-1\"></main>\n      </div>\n      <div class=\"yt-player\" data-mode=\"browse\">\n        <div class=\"yt-player-host\"></div>\n        <button type=\"button\" class=\"yt-mini-hit\" data-act=\"expand\" aria-label=\"Mở lớn trình phát\"></button>\n      </div>\n      <div class=\"yt-mini-bar\" hidden>\n        <div class=\"yt-mini-text\"><strong data-yt=\"mini-title\"></strong><span data-yt=\"mini-channel\"></span></div>\n        <button type=\"button\" class=\"yt-icon-btn\" data-act=\"toggle\" aria-label=\"Phát hoặc tạm dừng\" data-yt=\"mini-toggle\">{3}</button>\n        <button type=\"button\" class=\"yt-icon-btn\" data-act=\"close\" aria-label=\"Đóng trình phát\">{4}</button>\n      </div>", icon(PATH.menu), icon(PATH.search), icon(PATH.fit), icon(PATH.pause), icon(PATH.close));
     this.element.querySelector(".yt-player-host")!.append(this.playerBox);
     this.controls = new PlayerControls(this.element.querySelector<HTMLElement>(".yt-player")!, {
       player: () => this.player,
@@ -239,7 +216,7 @@ export class YouTubeTv {
     try {
       this.status = await this.request<YtStatus>("status");
     } catch (error) {
-      this.status = { configured: false, connected: false, account: null, pending: null, note: error instanceof Error ? error.message : "Hub không trả trạng thái YouTube." };
+      this.status = { configured: false, connected: false, account: null, pending: null, note: error instanceof Error ? error.message : L("Hub không trả trạng thái YouTube.") };
     }
     if (this.status.pending) this.statusTimer = window.setTimeout(() => void this.refreshStatus(), STATUS_POLL_MS);
     this.renderMe();
@@ -269,7 +246,7 @@ export class YouTubeTv {
     this.renderGuide();
     const seq = ++this.loadSeq;
     const content = this.q("content");
-    content.innerHTML = `<div class="yt-spinner" role="status" aria-label="Đang tải"></div>`;
+    content.innerHTML = L("<div class=\"yt-spinner\" role=\"status\" aria-label=\"Đang tải\"></div>");
     try {
       const query = view.arg ? `?${view.kind === "search" ? "q" : "id"}=${encodeURIComponent(view.arg)}` : "";
       const result = await this.request<YtFeedResult>(`feed/${view.kind}${query}`);
@@ -277,7 +254,7 @@ export class YouTubeTv {
     } catch (error) {
       if (seq !== this.loadSeq) return;
       if ((error as { status?: number }).status === 401) return void this.refreshStatus();
-      content.innerHTML = `<div class="yt-message"><strong>Không tải được</strong><p>${esc(error instanceof Error ? error.message : String(error))}</p><button type="button" class="yt-pill" data-act="retry">Thử lại</button></div>`;
+      content.innerHTML = L("<div class=\"yt-message\"><strong>Không tải được</strong><p>{0}</p><button type=\"button\" class=\"yt-pill\" data-act=\"retry\">Thử lại</button></div>", esc(error instanceof Error ? error.message : String(error)));
     }
   }
 
@@ -285,11 +262,11 @@ export class YouTubeTv {
     this.videos = result.videos;
     const content = this.q("content");
     const note = result.note ? `<p class="yt-note">${esc(result.note)}</p>` : "";
-    const empty = '<p class="yt-note">Không có video nào.</p>';
+    const empty = L("<p class=\"yt-note\">Không có video nào.</p>");
     let body: string;
-    if (result.kind === "subscriptions") body = `<h1 class="yt-page-title">Tất cả kênh đăng ký</h1><div class="yt-channel-grid">${result.channels.map(channelTile).join("")}</div>`;
-    else if (result.kind === "playlists") body = `<h1 class="yt-page-title">Danh sách phát</h1>${note}<div class="yt-grid">${result.playlists.map(playlistTile).join("")}</div>`;
-    else if (result.kind === "search") body = `<div class="yt-results">${result.videos.map(resultRow).join("") || '<p class="yt-note">Không tìm thấy kết quả nào.</p>'}</div>`;
+    if (result.kind === "subscriptions") body = L("<h1 class=\"yt-page-title\">Tất cả kênh đăng ký</h1><div class=\"yt-channel-grid\">{0}</div>", result.channels.map(channelTile).join(""));
+    else if (result.kind === "playlists") body = L("<h1 class=\"yt-page-title\">Danh sách phát</h1>{0}<div class=\"yt-grid\">{1}</div>", note, result.playlists.map(playlistTile).join(""));
+    else if (result.kind === "search") body = `<div class="yt-results">${result.videos.map(resultRow).join("") || L("<p class=\"yt-note\">Không tìm thấy kết quả nào.</p>")}</div>`;
     else body = `${this.pageHead(result)}${this.chips(result)}${note}<div class="yt-grid">${result.videos.map(videoCard).join("") || empty}</div>`;
     content.innerHTML = body;
     content.scrollTop = 0;
@@ -306,7 +283,7 @@ export class YouTubeTv {
     if (result.kind === "home") return "";
     if (result.kind === "channel" && result.channels[0]) {
       const channel = result.channels[0];
-      return `<header class="yt-channel-head">${avatar(channel.thumbnail, channel.title, "yt-channel-avatar")}<div><h1>${esc(channel.title)}</h1><span class="yt-stats">${result.videos.length} video gần đây</span></div></header><div class="yt-tabs"><span aria-current="true">Video</span></div>`;
+      return L("<header class=\"yt-channel-head\">{0}<div><h1>{1}</h1><span class=\"yt-stats\">{2} video gần đây</span></div></header><div class=\"yt-tabs\"><span aria-current=\"true\">Video</span></div>", avatar(channel.thumbnail, channel.title, "yt-channel-avatar"), esc(channel.title), result.videos.length);
     }
     const iconPath = result.kind === "trending" ? PATH.trending : result.kind === "liked" ? PATH.liked : PATH.playlists;
     return `<h1 class="yt-page-title yt-with-icon">${icon(iconPath)}${esc(result.title)}</h1>`;
@@ -320,15 +297,15 @@ export class YouTubeTv {
   private ownChannel(): string {
     const id = this.status?.account?.id ?? "";
     if (!id) return "";
-    return `<button type="button" class="yt-guide-item" data-channel="${esc(id)}" aria-current="${this.view.kind === "channel" && this.view.arg === id}">${icon(PATH.yourChannel)}<span>Kênh của bạn</span></button>`;
+    return L("<button type=\"button\" class=\"yt-guide-item\" data-channel=\"{0}\" aria-current=\"{1}\">{2}<span>Kênh của bạn</span></button>", esc(id), this.view.kind === "channel" && this.view.arg === id, icon(PATH.yourChannel));
   }
 
   private guideChannels(): string {
-    const head = `<hr><button type="button" class="yt-guide-head yt-guide-link" data-nav="subscriptions">Kênh đăng ký${icon(PATH.chevron)}</button>`;
+    const head = L("<hr><button type=\"button\" class=\"yt-guide-head yt-guide-link\" data-nav=\"subscriptions\">Kênh đăng ký{0}</button>", icon(PATH.chevron));
     if (!this.channels.length) return head;
     const shown = this.showAllChannels ? this.channels : this.channels.slice(0, GUIDE_CHANNELS);
     const rows = shown.map((channel) => `<button type="button" class="yt-guide-item yt-guide-channel" data-channel="${esc(channel.id)}" aria-current="${this.view.kind === "channel" && this.view.arg === channel.id}">${avatar(channel.thumbnail, channel.title, "yt-avatar-xs")}<span>${esc(channel.title)}</span></button>`).join("");
-    const more = this.channels.length > GUIDE_CHANNELS ? `<button type="button" class="yt-guide-item" data-act="more">${icon(this.showAllChannels ? PATH.expandLess : PATH.expandMore)}<span>${this.showAllChannels ? "Ẩn bớt" : "Thêm"}</span></button>` : "";
+    const more = this.channels.length > GUIDE_CHANNELS ? `<button type="button" class="yt-guide-item" data-act="more">${icon(this.showAllChannels ? PATH.expandLess : PATH.expandMore)}<span>${this.showAllChannels ? L("Ẩn bớt") : L("Thêm")}</span></button>` : "";
     return `${head}${rows}${more}`;
   }
 
@@ -336,12 +313,8 @@ export class YouTubeTv {
     const guide = this.q("guide");
     guide.dataset.mini = String(this.miniGuide);
     guide.innerHTML = this.miniGuide
-      ? `${this.guideItem("home", "Trang chủ", PATH.home)}${this.guideItem("subscriptions", "Kênh đăng ký", PATH.subs)}${this.guideItem("playlists", "Bạn", PATH.you)}${this.guideItem("trending", "Thịnh hành", PATH.trending)}`
-      : `${this.guideItem("home", "Trang chủ", PATH.home)}
-        ${this.guideChannels()}
-        <hr><button type="button" class="yt-guide-head yt-guide-link" data-nav="playlists">Bạn${icon(PATH.chevron)}</button>
-        ${this.ownChannel()}${this.guideItem("playlists", "Danh sách phát", PATH.playlists)}${this.guideItem("liked", "Video đã thích", PATH.liked)}
-        <hr><p class="yt-guide-head">Khám phá</p>${this.guideItem("trending", "Thịnh hành", PATH.trending)}`;
+      ? `${this.guideItem("home", L("Trang chủ"), PATH.home)}${this.guideItem("subscriptions", L("Kênh đăng ký"), PATH.subs)}${this.guideItem("playlists", L("Bạn"), PATH.you)}${this.guideItem("trending", L("Thịnh hành"), PATH.trending)}`
+      : L("{0}\n        {1}\n        <hr><button type=\"button\" class=\"yt-guide-head yt-guide-link\" data-nav=\"playlists\">Bạn{2}</button>\n        {3}{4}{5}\n        <hr><p class=\"yt-guide-head\">Khám phá</p>{6}", this.guideItem("home", L("Trang chủ"), PATH.home), this.guideChannels(), icon(PATH.chevron), this.ownChannel(), this.guideItem("playlists", L("Danh sách phát"), PATH.playlists), this.guideItem("liked", L("Video đã thích"), PATH.liked), this.guideItem("trending", L("Thịnh hành"), PATH.trending));
     if (!this.status?.connected) for (const button of guide.querySelectorAll<HTMLButtonElement>("[data-nav]")) button.disabled = true;
   }
 
@@ -351,11 +324,10 @@ export class YouTubeTv {
     this.element.dataset.premium = String(status?.connected ?? false);
     if (status?.connected) {
       const account = status.account;
-      const title = account?.title ?? "Tài khoản YouTube";
-      me.innerHTML = `<button type="button" class="yt-me-btn" data-act="account" aria-haspopup="true" aria-label="${esc(title)}">${avatar(account?.thumbnail ?? "", title, "yt-avatar-me")}</button>
-        <div class="yt-menu" hidden><div class="yt-menu-head">${avatar(account?.thumbnail ?? "", title, "yt-avatar")}<strong>${esc(title)}</strong></div><hr><button type="button" data-act="logout">Đăng xuất</button></div>`;
+      const title = account?.title ?? L("Tài khoản YouTube");
+      me.innerHTML = L("<button type=\"button\" class=\"yt-me-btn\" data-act=\"account\" aria-haspopup=\"true\" aria-label=\"{0}\">{1}</button>\n        <div class=\"yt-menu\" hidden><div class=\"yt-menu-head\">{2}<strong>{3}</strong></div><hr><button type=\"button\" data-act=\"logout\">Đăng xuất</button></div>", esc(title), avatar(account?.thumbnail ?? "", title, "yt-avatar-me"), avatar(account?.thumbnail ?? "", title, "yt-avatar"), esc(title));
     } else {
-      me.innerHTML = status?.configured && !status.pending ? `<button type="button" class="yt-signin" data-act="connect">${icon(PATH.person)}Đăng nhập</button>` : "";
+      me.innerHTML = status?.configured && !status.pending ? L("<button type=\"button\" class=\"yt-signin\" data-act=\"connect\">{0}Đăng nhập</button>", icon(PATH.person)) : "";
     }
   }
 
@@ -364,15 +336,15 @@ export class YouTubeTv {
     const content = this.q("content");
     let panel: string;
     if (!status?.configured) {
-      panel = `<strong>Chưa cài kết nối YouTube cho hub</strong><p>${esc(status?.note ?? "")}</p>`;
+      panel = L("<strong>Chưa cài kết nối YouTube cho hub</strong><p>{0}</p>", esc(status?.note ?? ""));
     } else if (status.pending) {
       const url = status.pending.verificationUrl.replace(/^https?:\/\//, "");
-      panel = `<strong>Đăng nhập YouTube trên điện thoại hoặc máy tính</strong><p>Mở <b>${esc(url)}</b> rồi nhập mã</p><span class="yt-code">${esc(status.pending.userCode)}</span><p>Mã hết hạn lúc ${new Date(status.pending.expiresAt).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}. Màn này tự chuyển khi đăng nhập xong.</p><button type="button" class="yt-pill" data-act="cancel">Huỷ</button>`;
+      panel = L("<strong>Đăng nhập YouTube trên điện thoại hoặc máy tính</strong><p>Mở <b>{0}</b> rồi nhập mã</p><span class=\"yt-code\">{1}</span><p>Mã hết hạn lúc {2}. Màn này tự chuyển khi đăng nhập xong.</p><button type=\"button\" class=\"yt-pill\" data-act=\"cancel\">Huỷ</button>", esc(url), esc(status.pending.userCode), new Date(status.pending.expiresAt).toLocaleTimeString(locale(), { hour: "2-digit", minute: "2-digit" }));
     } else {
-      panel = `<strong>Hãy đăng nhập để xem video từ các kênh sếp đăng ký</strong><p>Trang chủ theo kênh đăng ký, tìm kiếm, video đã thích và danh sách phát.</p>${status.note ? `<p>${esc(status.note)}</p>` : ""}<button type="button" class="yt-signin" data-act="connect">${icon(PATH.person)}Đăng nhập</button>`;
+      panel = L("<strong>Hãy đăng nhập để xem video từ các kênh sếp đăng ký</strong><p>Trang chủ theo kênh đăng ký, tìm kiếm, video đã thích và danh sách phát.</p>{0}<button type=\"button\" class=\"yt-signin\" data-act=\"connect\">{1}Đăng nhập</button>", status.note ? `<p>${esc(status.note)}</p>` : "", icon(PATH.person));
     }
     const notice = this.notice ? `<p class="yt-error" role="alert">${esc(this.notice)}</p>` : "";
-    content.innerHTML = `<div class="yt-message">${panel}${notice}</div><h1 class="yt-page-title">Video của kênh</h1><div class="yt-grid" data-yt="own"></div>`;
+    content.innerHTML = L("<div class=\"yt-message\">{0}{1}</div><h1 class=\"yt-page-title\">Video của kênh</h1><div class=\"yt-grid\" data-yt=\"own\"></div>", panel, notice);
     try {
       const feed = (await (await fetch("/api/youtube", { cache: "no-store" })).json()) as YouTubeFeed;
       if (this.status?.connected) return;

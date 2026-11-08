@@ -3,6 +3,8 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+const ENGLISH = process.env.MSC_LANG ? !process.env.MSC_LANG.toLowerCase().startsWith("vi") : !process.env.NODE_TEST_CONTEXT;
+const t = (vi, en) => (ENGLISH ? en : vi);
 const MARKER = "claude-control-hook.mjs";
 const EVENTS = { PermissionRequest: 86400, PreToolUse: 5, UserPromptSubmit: 5 };
 const UNMATCHED_EVENTS = new Set(["UserPromptSubmit"]);
@@ -18,7 +20,7 @@ function parseArgs(argv) {
     else if (arg === "--uninstall") options.uninstall = true;
     else if (arg === "--status") options.status = true;
     else if (arg === "--home" && argv[index + 1]) options.home = path.resolve(argv[++index]);
-    else throw new Error(`Tham số không hợp lệ: ${arg}`);
+    else throw new Error(t(`Tham số không hợp lệ: ${arg}`, `Invalid argument: ${arg}`));
   }
   return options;
 }
@@ -43,11 +45,11 @@ function withoutOurs(groups) {
 
 export function mergeSettings(settings, command, uninstall = false) {
   const next = structuredClone(record(settings) ?? {});
-  if (next.hooks !== undefined && !record(next.hooks)) throw new Error("Khoá hooks trong settings.json không phải đối tượng; không sửa");
+  if (next.hooks !== undefined && !record(next.hooks)) throw new Error(t("Khoá hooks trong settings.json không phải đối tượng; không sửa", "The hooks key in settings.json is not an object; not changing it"));
   const hooks = record(next.hooks) ?? {};
   for (const [event, timeout] of Object.entries(EVENTS)) {
     const desired = UNMATCHED_EVENTS.has(event) ? { hooks: [{ type: "command", command, timeout }] } : { matcher: "*", hooks: [{ type: "command", command, timeout }] };
-    if (hooks[event] !== undefined && !Array.isArray(hooks[event])) throw new Error(`Khoá hooks.${event} trong settings.json không phải mảng; không sửa`);
+    if (hooks[event] !== undefined && !Array.isArray(hooks[event])) throw new Error(t(`Khoá hooks.${event} trong settings.json không phải mảng; không sửa`, `The hooks.${event} key in settings.json is not an array; not changing it`));
     const current = hooks[event] ?? [];
     const matching = current.filter((group) => Array.isArray(record(group)?.hooks) && group.hooks.some(ours));
     if (!uninstall && matching.length === 1 && JSON.stringify(matching[0]) === JSON.stringify(desired)) continue;
@@ -71,7 +73,7 @@ function readSettings(file) {
   if (!existsSync(file)) return { exists: false, raw: "", value: {} };
   const raw = readFileSync(file, "utf8");
   const value = record(JSON.parse(raw));
-  if (!value) throw new Error(`${file} không phải một đối tượng JSON`);
+  if (!value) throw new Error(t(`${file} không phải một đối tượng JSON`, `${file} is not a JSON object`));
   return { exists: true, raw, value };
 }
 
@@ -90,7 +92,7 @@ function writeSettings(file, previous, value) {
     try { unlinkSync(temp); } catch {}
     if (backup) copyFileSync(backup, file);
     else try { unlinkSync(file); } catch {}
-    throw new Error(`Ghi ${file} thất bại, đã khôi phục bản cũ: ${error instanceof Error ? error.message : String(error)}`);
+    throw new Error(t(`Ghi ${file} thất bại, đã khôi phục bản cũ: `, `Writing ${file} failed; restored the previous copy: `) + (error instanceof Error ? error.message : String(error)));
   }
   return backup;
 }
@@ -106,14 +108,17 @@ export function run(argv, log = console.log) {
   if (options.status) {
     const state = installedState(current.value);
     const present = existsSync(target);
-    log(`Hook duyệt quyền: ${state.permission ? "đã cài" : "chưa cài"} · Hook dừng lượt: ${state.stop ? "đã cài" : "chưa cài"} · Tệp hook: ${present ? target : "chưa có"}`);
+    const yes = t("đã cài", "installed");
+    const no = t("chưa cài", "not installed");
+    log(t(`Hook duyệt quyền: ${state.permission ? yes : no} · Hook dừng lượt: ${state.stop ? yes : no} · Tệp hook: ${present ? target : "chưa có"}`, `Permission hook: ${state.permission ? yes : no} · Stop hook: ${state.stop ? yes : no} · Hook file: ${present ? target : "missing"}`));
     return state.permission && state.stop && present ? 0 : 1;
   }
   const next = mergeSettings(current.value, command, options.uninstall);
   const changed = JSON.stringify(next) !== JSON.stringify(current.value);
   const hookChanged = options.uninstall ? existsSync(target) : !existsSync(target) || readFileSync(target, "utf8") !== readFileSync(source, "utf8");
   if (options.dryRun) {
-    log(`[thử] ${settingsFile}: ${changed ? "sẽ cập nhật" : "không đổi"} · ${target}: ${hookChanged ? options.uninstall ? "sẽ xoá" : "sẽ chép" : "không đổi"}`);
+    const same = t("không đổi", "unchanged");
+    log(`${t("[thử]", "[dry run]")} ${settingsFile}: ${changed ? t("sẽ cập nhật", "will update") : same} · ${target}: ${hookChanged ? options.uninstall ? t("sẽ xoá", "will delete") : t("sẽ chép", "will copy") : same}`);
     if (changed) log(JSON.stringify(next.hooks ?? {}, null, 2));
     return 0;
   }
@@ -125,8 +130,8 @@ export function run(argv, log = console.log) {
   }
   const backup = changed ? writeSettings(settingsFile, current, next) : null;
   if (options.uninstall && hookChanged) unlinkSync(target);
-  log(`${options.uninstall ? "Đã gỡ" : "Đã cài"} hook điều khiển Claude${changed ? "" : " (cấu hình không đổi)"}${backup ? `; bản sao lưu: ${backup}` : ""}`);
-  if (changed) log("Phiên Claude đang mở cần mở lại để nạp hook mới.");
+  log(t(`${options.uninstall ? "Đã gỡ" : "Đã cài"} hook điều khiển Claude${changed ? "" : " (cấu hình không đổi)"}${backup ? `; bản sao lưu: ${backup}` : ""}`, `${options.uninstall ? "Removed" : "Installed"} the Claude control hook${changed ? "" : " (settings unchanged)"}${backup ? `; backup: ${backup}` : ""}`));
+  if (changed) log(t("Phiên Claude đang mở cần mở lại để nạp hook mới.", "Reopen running Claude sessions to load the new hook."));
   return 0;
 }
 

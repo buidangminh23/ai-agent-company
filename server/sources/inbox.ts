@@ -1,3 +1,4 @@
+import { L } from "../../shared/i18n.ts";
 import { EMPTY_INBOX, type CalendarEvent, type CalendarFeed, type InboxSnapshot, type MailAccount, type MailContent, type MailLabel, type MailMessage } from "../../shared/inbox.ts";
 import { DEFAULT_ZONE, expandEvents, parseCalendar, zonedToUtc, type ParsedCalendar } from "./ical.ts";
 import { type GmailCredentials, parseMessageRef, readLabels, readMailbox, readMessage, readMessages, searchSenders, suggestLabels, trashMessage } from "./imap.ts";
@@ -124,20 +125,20 @@ const CALENDAR_CACHE_MS = 5 * 60_000;
 let calendarCache: { at: number; key: string; entries: LoadedCalendar[] } | null = null;
 
 async function fetchCalendar(url: string, index: number): Promise<LoadedCalendar> {
-  const fallback = calendarIdFromUrl(url) || `Lịch ${index + 1}`;
+  const fallback = calendarIdFromUrl(url) || L("Lịch {0}", index + 1);
   const broken = (note: string): LoadedCalendar => ({ feed: { label: fallback, connected: false, note }, calendar: null });
   try {
     const res = await fetch(url, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS), headers: { accept: "text/calendar" } });
-    if (res.status === 404 || res.status === 403) return broken("Link iCal sai hoặc đã bị đặt lại");
-    if (!res.ok) return broken(`Google Calendar lỗi HTTP ${res.status}`);
+    if (res.status === 404 || res.status === 403) return broken(L("Link iCal sai hoặc đã bị đặt lại"));
+    if (!res.ok) return broken(L("Google Calendar lỗi HTTP {0}", res.status));
     const body = await res.text();
-    if (body.length > MAX_CALENDAR_BYTES) return broken("Lịch quá lớn để đọc");
-    if (!body.includes("BEGIN:VCALENDAR")) return broken("Link không trả về lịch iCal");
+    if (body.length > MAX_CALENDAR_BYTES) return broken(L("Lịch quá lớn để đọc"));
+    if (!body.includes("BEGIN:VCALENDAR")) return broken(L("Link không trả về lịch iCal"));
     const calendar = parseCalendar(body);
     return { feed: { label: calendar.name || fallback, connected: true, note: "" }, calendar };
   } catch (error) {
     const timeout = error instanceof Error && error.name === "TimeoutError";
-    return broken(timeout ? "Google Calendar không phản hồi kịp" : "Không tải được lịch");
+    return broken(timeout ? L("Google Calendar không phản hồi kịp") : L("Không tải được lịch"));
   }
 }
 
@@ -163,7 +164,7 @@ export function dedupeEvents(events: CalendarEvent[]): CalendarEvent[] {
 
 function expandAll(entries: LoadedCalendar[], windowStart: number, windowEnd: number): { feeds: CalendarFeed[]; events: CalendarEvent[] } {
   const perFeed = entries.map((entry) => (entry.calendar ? expandEvents(entry.calendar, entry.feed.label, windowStart, windowEnd) : []));
-  const feeds = entries.map((entry, index) => (entry.calendar ? { ...entry.feed, note: `${perFeed[index].length} sự kiện` } : entry.feed));
+  const feeds = entries.map((entry, index) => (entry.calendar ? { ...entry.feed, note: L("{0} sự kiện", perFeed[index].length) } : entry.feed));
   return { feeds, events: dedupeEvents(perFeed.flat()) };
 }
 
@@ -223,7 +224,7 @@ export async function readCustomerMail(emails: string[], limit = CUSTOMER_MAIL_L
     try {
       return { address: account.address, connected: true, note: "", messages: await searchSenders(account, senders, limit) };
     } catch (error) {
-      return { address: account.address, connected: false, note: error instanceof Error ? error.message.slice(0, 140) : "Gmail không trả lời", messages: [] as MailMessage[] };
+      return { address: account.address, connected: false, note: error instanceof Error ? error.message.slice(0, 140) : L("Gmail không trả lời"), messages: [] as MailMessage[] };
     }
   }));
   const messages = results.flatMap((result) => result.messages).sort((a, b) => b.at.localeCompare(a.at)).slice(0, limit);

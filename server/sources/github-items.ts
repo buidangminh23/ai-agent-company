@@ -1,3 +1,4 @@
+import { L } from "../../shared/i18n.ts";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { buildGitHub, type GitAction, type GitHubSnapshot, type GitItem, type RawGitHub, type RawNotification } from "../../shared/github.ts";
@@ -66,15 +67,15 @@ async function refreshCodeScanning(repos: string[], now: number): Promise<void> 
 export async function readGitHub(now = Date.now()): Promise<GitHubSnapshot> {
   try {
     const raw = JSON.parse(await gh(["api", "graphql", "-f", `query=${query(new Date(now - USAGE_DAYS * 86_400_000).toISOString())}`])) as { data?: RawGitHub; errors?: { message: string }[] };
-    if (!raw.data?.viewer) throw new Error(raw.errors?.[0]?.message ?? "GitHub không trả dữ liệu");
+    if (!raw.data?.viewer) throw new Error(raw.errors?.[0]?.message ?? L("GitHub không trả dữ liệu"));
     const notifications = (JSON.parse(await gh(["api", `notifications?per_page=${MAX_NOTIFICATIONS}`]).catch(() => "[]")) as RawNotification[]).slice(0, MAX_NOTIFICATIONS);
     const repos = (raw.data.viewer.repositories?.nodes ?? []).filter((repo) => !repo.isArchived).map((repo) => repo.nameWithOwner);
     await refreshCodeScanning(repos, now);
     const snapshot = buildGitHub(raw.data, notifications, codeScanning, now);
-    const partial = raw.errors?.length ? `GitHub trả thiếu một phần: ${raw.errors[0].message.slice(0, 120)}` : "";
+    const partial = raw.errors?.length ? L("GitHub trả thiếu một phần: {0}", raw.errors[0].message.slice(0, 120)) : "";
     return { ...snapshot, note: partial };
   } catch (error) {
-    return { connected: false, note: `GitHub CLI lỗi: ${firstLine(error)}`, login: "", fetchedAt: null, repos: 0, items: [] };
+    return { connected: false, note: L("GitHub CLI lỗi: {0}", firstLine(error)), login: "", fetchedAt: null, repos: 0, items: [] };
   }
 }
 
@@ -83,16 +84,16 @@ function itemNumber(item: GitItem): string {
 }
 
 export function actionArgs(item: GitItem, action: GitAction): string[] {
-  if (!item.actions.includes(action)) throw new Error("Thao tác không áp dụng cho mục này");
+  if (!item.actions.includes(action)) throw new Error(L("Thao tác không áp dụng cho mục này"));
   if (action === "rerun") {
     const runId = /:run:(\d+)$/.exec(item.id)?.[1];
-    if (!runId) throw new Error("Không tìm thấy lượt chạy CI");
+    if (!runId) throw new Error(L("Không tìm thấy lượt chạy CI"));
     return ["run", "rerun", runId, "--failed", "-R", item.repo];
   }
   if (action === "merge") return ["pr", "merge", itemNumber(item), "-R", item.repo, "--squash", "--delete-branch"];
   if (action === "close") return ["issue", "close", itemNumber(item), "-R", item.repo];
   const thread = item.id.slice("notification:".length);
-  if (!/^\d+$/.test(thread)) throw new Error("Không tìm thấy thông báo");
+  if (!/^\d+$/.test(thread)) throw new Error(L("Không tìm thấy thông báo"));
   return ["api", "-X", "PATCH", `notifications/threads/${thread}`];
 }
 

@@ -1,3 +1,4 @@
+import { L } from "../shared/i18n.ts";
 import { createHash } from "node:crypto";
 import { mkdirSync } from "node:fs";
 import os from "node:os";
@@ -47,10 +48,10 @@ interface ReceiptRow extends ReplyReceipt {
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const HASH = /^[a-f0-9]{64}$/;
 const STATUS_TEXT: Record<ReplyStatus, string> = {
-  pending: "Đang kiểm tra và gửi câu trả lời; không gửi lại",
-  answered: "Ứng dụng gốc đã xác nhận nhận câu trả lời",
-  rejected: "Câu hỏi đã thay đổi, đã được trả lời hoặc dữ liệu không hợp lệ; chưa gửi",
-  unknown: "Chưa xác nhận được kết quả; không tự gửi lại, kiểm tra chat gốc",
+  pending: L("Đang kiểm tra và gửi câu trả lời; không gửi lại"),
+  answered: L("Ứng dụng gốc đã xác nhận nhận câu trả lời"),
+  rejected: L("Câu hỏi đã thay đổi, đã được trả lời hoặc dữ liệu không hợp lệ; chưa gửi"),
+  unknown: L("Chưa xác nhận được kết quả; không tự gửi lại, kiểm tra chat gốc"),
 };
 
 export class ReplyBrokerError extends Error {
@@ -124,12 +125,12 @@ function publicQuestion(question: NativeReplyQuestion): ReplyQuestion {
 }
 
 function submission(value: unknown): ReplySubmission {
-  if (!value || typeof value !== "object" || Array.isArray(value)) throw new ReplyBrokerError(400, "Dữ liệu trả lời không hợp lệ");
+  if (!value || typeof value !== "object" || Array.isArray(value)) throw new ReplyBrokerError(400, L("Dữ liệu trả lời không hợp lệ"));
   const body = value as ReplySubmission;
-  if (!UUID.test(body.requestId) || !HASH.test(body.questionId) || !text(body.agentId, 300) || !body.answers || typeof body.answers !== "object" || Array.isArray(body.answers)) throw new ReplyBrokerError(400, "Dữ liệu trả lời không hợp lệ");
+  if (!UUID.test(body.requestId) || !HASH.test(body.questionId) || !text(body.agentId, 300) || !body.answers || typeof body.answers !== "object" || Array.isArray(body.answers)) throw new ReplyBrokerError(400, L("Dữ liệu trả lời không hợp lệ"));
   const entries = Object.entries(body.answers);
-  if (entries.length < 1 || entries.length > 8 || entries.some(([id, answers]) => !text(id, 200) || !Array.isArray(answers) || answers.length > 30 || answers.some((answer) => !plain(answer, 4000)))) throw new ReplyBrokerError(400, "Nội dung câu trả lời không hợp lệ");
-  if (Buffer.byteLength(JSON.stringify(body)) > 32 * 1024) throw new ReplyBrokerError(413, "Nội dung câu trả lời quá dài");
+  if (entries.length < 1 || entries.length > 8 || entries.some(([id, answers]) => !text(id, 200) || !Array.isArray(answers) || answers.length > 30 || answers.some((answer) => !plain(answer, 4000)))) throw new ReplyBrokerError(400, L("Nội dung câu trả lời không hợp lệ"));
+  if (Buffer.byteLength(JSON.stringify(body)) > 32 * 1024) throw new ReplyBrokerError(413, L("Nội dung câu trả lời quá dài"));
   const filled = entries.map(([id, answers]) => [id, answers.filter((answer) => answer.trim().length > 0)] as const).filter(([, answers]) => answers.length > 0);
   return { requestId: body.requestId.toLowerCase(), questionId: body.questionId, agentId: body.agentId, answers: Object.fromEntries(filled.sort(([a], [b]) => a.localeCompare(b)).map(([id, answers]) => [id, [...answers]])) };
 }
@@ -184,7 +185,7 @@ export class ReplyBroker {
   }
 
   receipt(requestId: string): ReplyReceipt | null {
-    if (!UUID.test(requestId)) throw new ReplyBrokerError(400, "Mã gửi không hợp lệ");
+    if (!UUID.test(requestId)) throw new ReplyBrokerError(400, L("Mã gửi không hợp lệ"));
     const row = this.row(requestId.toLowerCase());
     return row ? this.publicReceipt(row) : null;
   }
@@ -196,18 +197,18 @@ export class ReplyBroker {
       const app = agent.app as ReplyApp;
       const unavailable = (reason: string) => result.unavailable.push({ agentId: agent.id, app, machine: agent.machine, reason });
       const adapter = this.adapters.get(app);
-      if (!adapter) return unavailable("Ứng dụng chưa có kênh trả lời trực tiếp đã xác minh");
-      if (!this.db) return unavailable("Không lưu được biên nhận; gửi trực tiếp đang tắt");
+      if (!adapter) return unavailable(L("Ứng dụng chưa có kênh trả lời trực tiếp đã xác minh"));
+      if (!this.db) return unavailable(L("Không lưu được biên nhận; gửi trực tiếp đang tắt"));
       try {
         const questions = await bounded((signal) => adapter.list(agent, signal), this.timeoutMs);
-        if (!Array.isArray(questions) || questions.length > 16) return unavailable("Dữ liệu câu hỏi từ ứng dụng không hợp lệ");
+        if (!Array.isArray(questions) || questions.length > 16) return unavailable(L("Dữ liệu câu hỏi từ ứng dụng không hợp lệ"));
         for (const question of questions) {
           if (!questionValid(question, agent)) continue;
           const id = replyQuestionId(question);
           const claimed = this.db?.prepare("SELECT requestId FROM receipts WHERE questionId = ? AND status != 'rejected'").get(id);
           if (!claimed && !this.nativeBlocked(question)) result.questions.push(publicQuestion(question));
         }
-      } catch { unavailable("Không xác minh được câu hỏi trong ứng dụng gốc"); }
+      } catch { unavailable(L("Không xác minh được câu hỏi trong ứng dụng gốc")); }
     }));
     result.questions.sort((a, b) => a.askedAt.localeCompare(b.askedAt));
     return result;
@@ -215,16 +216,16 @@ export class ReplyBroker {
 
   async answer(value: unknown, agents: AgentInfo[]): Promise<ReplyReceipt> {
     const body = submission(value);
-    if (!this.db) throw new ReplyBrokerError(503, "Không lưu được biên nhận; chưa gửi câu trả lời");
+    if (!this.db) throw new ReplyBrokerError(503, L("Không lưu được biên nhận; chưa gửi câu trả lời"));
     const hash = digest([body.questionId, body.agentId, body.answers]);
     const previous = this.row(body.requestId);
     if (previous) {
-      if (previous.digest !== hash) throw new ReplyBrokerError(409, "Mã gửi đã được dùng cho nội dung khác");
+      if (previous.digest !== hash) throw new ReplyBrokerError(409, L("Mã gửi đã được dùng cho nội dung khác"));
       return this.publicReceipt(previous);
     }
     const agent = agents.find((item) => item.id === body.agentId);
     const adapter = agent && (agent.app === "codex" || agent.app === "claude") ? this.adapters.get(agent.app) : undefined;
-    if (!agent || !adapter || !agent.cwd || !agent.sessionId) throw new ReplyBrokerError(409, "Không xác minh được phiên đích; chưa gửi");
+    if (!agent || !adapter || !agent.cwd || !agent.sessionId) throw new ReplyBrokerError(409, L("Không xác minh được phiên đích; chưa gửi"));
     let native: NativeReplyQuestion | undefined;
     try {
       const questions = await bounded((signal) => adapter.list(agent, signal), this.timeoutMs);
@@ -242,9 +243,9 @@ export class ReplyBroker {
     } catch {
       const current = this.row(body.requestId);
       if (current?.digest === hash) return this.publicReceipt(current);
-      if (current) throw new ReplyBrokerError(409, "Mã gửi đã được dùng cho nội dung khác");
-      if (this.db.prepare("SELECT requestId FROM receipts WHERE questionId = ? AND status != 'rejected'").get(body.questionId)) throw new ReplyBrokerError(409, "Câu hỏi đã có một lần gửi; kiểm tra biên nhận trước khi tiếp tục");
-      throw new ReplyBrokerError(503, "Không lưu được biên nhận; chưa gửi câu trả lời");
+      if (current) throw new ReplyBrokerError(409, L("Mã gửi đã được dùng cho nội dung khác"));
+      if (this.db.prepare("SELECT requestId FROM receipts WHERE questionId = ? AND status != 'rejected'").get(body.questionId)) throw new ReplyBrokerError(409, L("Câu hỏi đã có một lần gửi; kiểm tra biên nhận trước khi tiếp tục"));
+      throw new ReplyBrokerError(503, L("Không lưu được biên nhận; chưa gửi câu trả lời"));
     }
     if (!native || initialStatus === "rejected") return this.publicReceipt(this.row(body.requestId)!);
     try {
@@ -274,7 +275,7 @@ export class ReplyBroker {
   }
 
   private row(requestId: string): ReceiptRow | undefined {
-    if (!this.db) throw new ReplyBrokerError(503, "Kho biên nhận chưa sẵn sàng");
+    if (!this.db) throw new ReplyBrokerError(503, L("Kho biên nhận chưa sẵn sàng"));
     return this.db.prepare("SELECT * FROM receipts WHERE requestId = ?").get(requestId) as unknown as ReceiptRow | undefined;
   }
 
@@ -305,7 +306,7 @@ export class ReplyBroker {
       });
       return this.publicReceipt(this.row(requestId)!);
     } catch {
-      throw new ReplyBrokerError(503, "Không cập nhật được biên nhận; không gửi lại, kiểm tra chat gốc");
+      throw new ReplyBrokerError(503, L("Không cập nhật được biên nhận; không gửi lại, kiểm tra chat gốc"));
     }
   }
 }

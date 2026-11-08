@@ -1,3 +1,4 @@
+import { L } from "../shared/i18n.ts";
 import { createHash } from "node:crypto";
 import { mkdirSync } from "node:fs";
 import os from "node:os";
@@ -42,21 +43,21 @@ const MACHINES: readonly MachineId[] = ["WORKSTATION", "SERVER", "LAPTOP"];
 const ACTIONS: readonly ControlAction[] = ["stop", "settings"];
 const CONTROL_APPS: readonly AgentApp[] = ["claude", "codex", "antigravity"];
 const STATUS_TEXT: Record<ControlStatus, string> = {
-  pending: "Đang gửi thao tác tới ứng dụng gốc; không gửi lại",
-  done: "Ứng dụng gốc đã xác nhận thao tác",
-  rejected: "Trạng thái agent đã thay đổi hoặc thao tác không còn hợp lệ; chưa gửi",
-  unknown: "Chưa xác nhận được kết quả; không tự gửi lại, kiểm tra trong ứng dụng gốc",
+  pending: L("Đang gửi thao tác tới ứng dụng gốc; không gửi lại"),
+  done: L("Ứng dụng gốc đã xác nhận thao tác"),
+  rejected: L("Trạng thái agent đã thay đổi hoặc thao tác không còn hợp lệ; chưa gửi"),
+  unknown: L("Chưa xác nhận được kết quả; không tự gửi lại, kiểm tra trong ứng dụng gốc"),
 };
-export const CONTROL_UNVERIFIED = "Không xác minh được kênh điều khiển trong ứng dụng gốc";
-const NO_ADAPTER = "Ứng dụng chưa có kênh điều khiển trực tiếp đã xác minh";
-const NO_STORE = "Không lưu được biên nhận; dừng và đổi cài đặt từ web đang tắt";
-const NO_SEND = "Chưa có kênh gửi tin nhắn đã xác minh";
-const SEND_FAILED = "Không xác minh được kênh gửi tin nhắn";
+export const CONTROL_UNVERIFIED = L("Không xác minh được kênh điều khiển trong ứng dụng gốc");
+const NO_ADAPTER = L("Ứng dụng chưa có kênh điều khiển trực tiếp đã xác minh");
+const NO_STORE = L("Không lưu được biên nhận; dừng và đổi cài đặt từ web đang tắt");
+const NO_SEND = L("Chưa có kênh gửi tin nhắn đã xác minh");
+const SEND_FAILED = L("Không xác minh được kênh gửi tin nhắn");
 const ANTIGRAVITY: NativeControlState = {
-  approvals: { available: false, reason: "Antigravity chưa có kênh duyệt đã xác minh từ web; thao tác trong app" },
-  questions: { available: false, reason: "Antigravity chưa có kênh trả lời đã xác minh từ web; thao tác trong app" },
-  stop: { available: false, reason: "Antigravity chưa có kênh dừng đã xác minh từ web; thao tác trong app", warning: "" },
-  settings: { available: false, reason: "Antigravity chưa có kênh đổi cài đặt đã xác minh từ web; thao tác trong app", model: null, effort: null, models: [] },
+  approvals: { available: false, reason: L("Antigravity chưa có kênh duyệt đã xác minh từ web; thao tác trong app") },
+  questions: { available: false, reason: L("Antigravity chưa có kênh trả lời đã xác minh từ web; thao tác trong app") },
+  stop: { available: false, reason: L("Antigravity chưa có kênh dừng đã xác minh từ web; thao tác trong app"), warning: "" },
+  settings: { available: false, reason: L("Antigravity chưa có kênh đổi cài đặt đã xác minh từ web; thao tác trong app"), model: null, effort: null, models: [] },
 };
 
 export class ControlBrokerError extends Error {
@@ -115,7 +116,7 @@ export function unavailableControl(reason: string): NativeControlState {
 }
 
 export function controlSubmission(value: unknown): ControlSubmission {
-  const invalid = () => new ControlBrokerError(400, "Dữ liệu điều khiển không hợp lệ");
+  const invalid = () => new ControlBrokerError(400, L("Dữ liệu điều khiển không hợp lệ"));
   if (!record(value)) throw invalid();
   if (typeof value.requestId !== "string" || !UUID.test(value.requestId) || !text(value.agentId, 300) || !MACHINES.includes(value.machine as MachineId) || !ACTIONS.includes(value.action as ControlAction)) throw invalid();
   const body: ControlSubmission = { requestId: value.requestId.toLowerCase(), agentId: value.agentId, machine: value.machine as MachineId, action: value.action as ControlAction };
@@ -124,8 +125,8 @@ export function controlSubmission(value: unknown): ControlSubmission {
     return body;
   }
   const change = value.settings;
-  if (!record(change) || Object.keys(change).some((key) => key !== "model" && key !== "effort") || (change.model === undefined && change.effort === undefined)) throw new ControlBrokerError(400, "Cần chọn model hoặc mức suy nghĩ mới");
-  if ((change.model !== undefined && !text(change.model, 200)) || (change.effort !== undefined && !text(change.effort, 200))) throw new ControlBrokerError(400, "Model hoặc mức suy nghĩ không hợp lệ");
+  if (!record(change) || Object.keys(change).some((key) => key !== "model" && key !== "effort") || (change.model === undefined && change.effort === undefined)) throw new ControlBrokerError(400, L("Cần chọn model hoặc mức suy nghĩ mới"));
+  if ((change.model !== undefined && !text(change.model, 200)) || (change.effort !== undefined && !text(change.effort, 200))) throw new ControlBrokerError(400, L("Model hoặc mức suy nghĩ không hợp lệ"));
   return { ...body, settings: { ...(change.model !== undefined ? { model: change.model as string } : {}), ...(change.effort !== undefined ? { effort: change.effort as string } : {}) } };
 }
 
@@ -180,7 +181,7 @@ export class ControlBroker {
   }
 
   receipt(requestId: string): ControlReceipt | null {
-    if (!UUID.test(requestId)) throw new ControlBrokerError(400, "Mã gửi không hợp lệ");
+    if (!UUID.test(requestId)) throw new ControlBrokerError(400, L("Mã gửi không hợp lệ"));
     const row = this.row(requestId.toLowerCase());
     return row ? this.publicReceipt(row) : null;
   }
@@ -189,7 +190,7 @@ export class ControlBroker {
     const eligible = agents.filter((agent) => CONTROL_APPS.includes(agent.app) && !agent.parentId).slice(0, 100);
     const sendable = await this.sendable(eligible);
     const states = await Promise.all(eligible.map(async (agent): Promise<AgentControlState> => {
-      const send = sendable.get(agent.id) ?? { available: false, reason: sendable.size ? `${NO_SEND} cho agent này` : NO_SEND };
+      const send = sendable.get(agent.id) ?? { available: false, reason: sendable.size ? L("{0} cho agent này", NO_SEND) : NO_SEND };
       return { agentId: agent.id, app: agent.app, machine: agent.machine, send, ...await this.nativeState(agent) };
     }));
     return { generatedAt: new Date().toISOString(), agents: states };
@@ -197,16 +198,16 @@ export class ControlBroker {
 
   async submit(value: unknown, agents: AgentInfo[]): Promise<ControlReceipt> {
     const body = controlSubmission(value);
-    if (!this.db) throw new ControlBrokerError(503, "Không lưu được biên nhận; chưa gửi thao tác");
+    if (!this.db) throw new ControlBrokerError(503, L("Không lưu được biên nhận; chưa gửi thao tác"));
     const hash = digest([body.agentId, body.machine, body.action, body.settings ?? null]);
     const previous = this.row(body.requestId);
     if (previous) {
-      if (previous.digest !== hash) throw new ControlBrokerError(409, "Mã gửi đã được dùng cho thao tác khác");
+      if (previous.digest !== hash) throw new ControlBrokerError(409, L("Mã gửi đã được dùng cho thao tác khác"));
       return this.publicReceipt(previous);
     }
     const agent = agents.find((item) => item.id === body.agentId && item.machine === body.machine && !item.parentId);
     const adapter = agent && (agent.app === "claude" || agent.app === "codex") ? this.adapters.get(agent.app) : undefined;
-    if (!agent || !adapter) throw new ControlBrokerError(409, "Không xác minh được phiên đích; chưa gửi");
+    if (!agent || !adapter) throw new ControlBrokerError(409, L("Không xác minh được phiên đích; chưa gửi"));
     let allowed = false;
     try {
       const state = controlState(await bounded((signal) => adapter.state(agent, signal), this.timeoutMs));
@@ -219,9 +220,9 @@ export class ControlBroker {
     } catch {
       const current = this.row(body.requestId);
       if (current?.digest === hash) return this.publicReceipt(current);
-      if (current) throw new ControlBrokerError(409, "Mã gửi đã được dùng cho thao tác khác");
-      if (this.db.prepare("SELECT requestId FROM receipts WHERE agentId = ? AND status = 'pending'").get(body.agentId)) throw new ControlBrokerError(409, "Agent đang có một thao tác chờ xác nhận; kiểm tra biên nhận trước khi tiếp tục");
-      throw new ControlBrokerError(503, "Không lưu được biên nhận; chưa gửi thao tác");
+      if (current) throw new ControlBrokerError(409, L("Mã gửi đã được dùng cho thao tác khác"));
+      if (this.db.prepare("SELECT requestId FROM receipts WHERE agentId = ? AND status = 'pending'").get(body.agentId)) throw new ControlBrokerError(409, L("Agent đang có một thao tác chờ xác nhận; kiểm tra biên nhận trước khi tiếp tục"));
+      throw new ControlBrokerError(503, L("Không lưu được biên nhận; chưa gửi thao tác"));
     }
     if (initialStatus === "rejected") return this.publicReceipt(this.row(body.requestId)!);
     const context = (signal: AbortSignal) => ({ author: "human-web" as const, requestId: body.requestId, signal });
@@ -263,7 +264,7 @@ export class ControlBroker {
   }
 
   private row(requestId: string): ControlRow | undefined {
-    if (!this.db) throw new ControlBrokerError(503, "Kho biên nhận chưa sẵn sàng");
+    if (!this.db) throw new ControlBrokerError(503, L("Kho biên nhận chưa sẵn sàng"));
     return this.db.prepare("SELECT * FROM receipts WHERE requestId = ?").get(requestId) as unknown as ControlRow | undefined;
   }
 
@@ -277,7 +278,7 @@ export class ControlBroker {
       this.db!.prepare("UPDATE receipts SET status = ?, updatedAt = ?, detail = ? WHERE requestId = ?").run(status, now, detail ? `${STATUS_TEXT[status]}: ${detail}` : STATUS_TEXT[status], requestId);
       return this.publicReceipt(this.row(requestId)!);
     } catch {
-      throw new ControlBrokerError(503, "Không cập nhật được biên nhận; không gửi lại, kiểm tra trong ứng dụng gốc");
+      throw new ControlBrokerError(503, L("Không cập nhật được biên nhận; không gửi lại, kiểm tra trong ứng dụng gốc"));
     }
   }
 }

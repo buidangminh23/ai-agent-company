@@ -1,3 +1,4 @@
+import { L } from "../../shared/i18n.ts";
 import tls from "node:tls";
 import type { MailAccount, MailContent, MailLabel, MailMessage } from "../../shared/inbox.ts";
 import { parseMime } from "./mime.ts";
@@ -329,8 +330,8 @@ export function parseFetch(responses: ImapResponse[], address: string, box = INB
     const sender = fromAddress(headers.from ?? "");
     messages.push({
       id: messageId(address, box, uid),
-      from: senderName(headers.from ?? "") || "Không rõ người gửi",
-      subject: (headers.subject ?? "").trim() || "(Không có tiêu đề)",
+      from: senderName(headers.from ?? "") || L("Không rõ người gửi"),
+      subject: (headers.subject ?? "").trim() || L("(Không có tiêu đề)"),
       at: at ?? new Date(0).toISOString(),
       url: gmailUrl(address, thread),
       unread: !/\\Seen\b/i.test(flags),
@@ -350,7 +351,7 @@ function openSession(host: string, port: number, timeoutMs: number, connect = (h
     let greeted = false;
     let failure: Error | null = null;
     let counter = 0;
-    let timer = setTimeout(() => fail(new ImapError("Gmail không phản hồi kịp")), timeoutMs);
+    let timer = setTimeout(() => fail(new ImapError(L("Gmail không phản hồi kịp"))), timeoutMs);
     function fail(error: Error): void {
       if (failure) return;
       failure = error;
@@ -369,7 +370,7 @@ function openSession(host: string, port: number, timeoutMs: number, connect = (h
         return new Promise((done, broken) => {
           waiter = { tag, resolve: done, reject: broken };
           clearTimeout(timer);
-          timer = setTimeout(() => fail(new ImapError("Gmail không phản hồi kịp")), timeoutMs);
+          timer = setTimeout(() => fail(new ImapError(L("Gmail không phản hồi kịp"))), timeoutMs);
           socket.write(`${tag} ${text}\r\n`);
         });
       },
@@ -385,7 +386,7 @@ function openSession(host: string, port: number, timeoutMs: number, connect = (h
       },
     };
     socket.on("error", (error) => fail(error));
-    socket.on("close", () => fail(new ImapError("Gmail đóng kết nối")));
+    socket.on("close", () => fail(new ImapError(L("Gmail đóng kết nối"))));
     socket.on("data", (chunk: Buffer) => {
       try {
         reader.push(chunk);
@@ -396,7 +397,7 @@ function openSession(host: string, port: number, timeoutMs: number, connect = (h
       for (const response of reader.drain()) {
         if (!greeted) {
           if (!/^\* (OK|PREAUTH)\b/i.test(response.line)) {
-            fail(new ImapError("Máy chủ IMAP từ chối kết nối"));
+            fail(new ImapError(L("Máy chủ IMAP từ chối kết nối")));
             return;
           }
           greeted = true;
@@ -421,9 +422,9 @@ function openSession(host: string, port: number, timeoutMs: number, connect = (h
 
 function failureNote(error: unknown): string {
   const message = error instanceof Error ? error.message : String(error);
-  if (/AUTHENTICATIONFAILED|Invalid credentials|LOGIN failed/i.test(message)) return "Gmail từ chối đăng nhập: App Password sai hoặc đã bị thu hồi";
-  if (/WEBALERT|ALERT/i.test(message)) return "Gmail yêu cầu xác minh lại tài khoản trên trình duyệt";
-  if (/ENOTFOUND|EAI_AGAIN|ECONNREFUSED|ETIMEDOUT|ENETUNREACH/i.test(message)) return "Không kết nối được máy chủ Gmail";
+  if (/AUTHENTICATIONFAILED|Invalid credentials|LOGIN failed/i.test(message)) return L("Gmail từ chối đăng nhập: App Password sai hoặc đã bị thu hồi");
+  if (/WEBALERT|ALERT/i.test(message)) return L("Gmail yêu cầu xác minh lại tài khoản trên trình duyệt");
+  if (/ENOTFOUND|EAI_AGAIN|ECONNREFUSED|ETIMEDOUT|ENETUNREACH/i.test(message)) return L("Không kết nối được máy chủ Gmail");
   return message.length > 140 ? `${message.slice(0, 140)}…` : message;
 }
 
@@ -570,7 +571,7 @@ async function readInbox(account: GmailCredentials, options: MailboxOptions): Pr
     const listed = searchIds(await session.command("UID SEARCH ALL"));
     const latest = listed.sort((a, b) => a - b).slice(-(options.limit ?? DEFAULT_LIMIT));
     const recent = latest.length ? parseFetch(await session.command(`UID FETCH ${latest.join(",")} (${FETCH_ITEMS})`), account.address) : [];
-    return { ...base, connected: true, note: "Hộp thư đến", unread: all.length, unreadAll: all.length, recent };
+    return { ...base, connected: true, note: L("Hộp thư đến"), unread: all.length, unreadAll: all.length, recent };
   } catch (error) {
     return { ...base, note: failureNote(error) };
   } finally {
@@ -599,9 +600,9 @@ function messageFromFetch(response: ImapResponse, address: string, box: string):
   return {
     id: messageId(address, box, uid),
     account: address,
-    from: (mime.headers.from ?? "").trim() || "Không rõ người gửi",
+    from: (mime.headers.from ?? "").trim() || L("Không rõ người gửi"),
     to: (mime.headers.to ?? "").trim(),
-    subject: (mime.headers.subject ?? "").trim() || "(Không có tiêu đề)",
+    subject: (mime.headers.subject ?? "").trim() || L("(Không có tiêu đề)"),
     at: at ?? new Date(0).toISOString(),
     url: gmailUrl(address, thread),
     html: mime.html,

@@ -1,3 +1,4 @@
+import { L } from "../../shared/i18n.ts";
 import type http from "node:http";
 
 const QUOTA_ORIGIN = new URL(process.env.MSC_QUOTA_URL ?? "http://127.0.0.1:6736/v1/limits").origin;
@@ -101,7 +102,7 @@ async function forward(res: http.ServerResponse, target: string, init: RequestIn
     });
     res.end(body);
   } catch {
-    res.writeHead(502, { "content-type": "application/json; charset=utf-8" }).end(JSON.stringify({ error: "Quota Control trên máy chủ không phản hồi." }));
+    res.writeHead(502, { "content-type": "application/json; charset=utf-8" }).end(JSON.stringify({ error: L("Quota Control trên máy chủ không phản hồi.") }));
   }
 }
 
