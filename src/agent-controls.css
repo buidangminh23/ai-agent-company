@@ -1,0 +1,35 @@
+.ops-controls { display: grid; gap: 0.75rem; margin-top: 1rem; padding: 0.75rem; border: 1px solid var(--ops-line-strong); border-radius: 0.75rem; background: var(--ops-surface); min-width: 0; }
+.ops-control-head { display: grid; gap: 0.25rem; }
+.ops-control-head strong { font-size: 0.82rem; color: var(--ops-text); }
+.ops-control-head small { font-size: 0.72rem; color: var(--ops-muted); line-height: 1.5; }
+.ops-shell .ops-controls button { min-height: 2.75rem; min-width: 2.75rem; padding: 0.5rem 1rem; }
+.ops-shell .ops-controls button[data-tone="stop"] { background: #d92d20; border-color: #d92d20; color: #fff; }
+.ops-shell .ops-controls button[data-tone="stop"]:hover { background: #b42318; border-color: #b42318; }
+.ops-control-stop { justify-self: start; }
+.ops-control-confirm { display: grid; gap: 0.5rem; padding: 0.75rem; border: 1px solid #fda29b; border-radius: 0.5rem; background: var(--ops-red-soft); }
+.ops-control-confirm p { margin: 0; color: #912018; font-size: 0.78rem; line-height: 1.5; }
+.ops-control-buttons { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.ops-control-settings { display: grid; gap: 0.5rem; padding-top: 0.75rem; border-top: 1px solid var(--ops-line); }
+.ops-control-current { margin: 0; color: var(--ops-muted); font-size: 0.75rem; line-height: 1.5; }
+.ops-control-current strong { color: var(--ops-text); font-weight: 600; }
+.ops-control-fields { display: grid; gap: 0.5rem; }
+.ops-control-fields label { display: grid; gap: 0.25rem; min-width: 0; font-size: 0.75rem; font-weight: 600; color: var(--ops-soft); }
+.ops-control-fields select { box-sizing: border-box; width: 100%; min-height: 2.75rem; padding: 0.5rem 0.75rem; border: 1px solid var(--ops-line-strong); border-radius: 0.5rem; background: var(--ops-surface); color: var(--ops-text); font: 500 1rem/1.25 Inter, system-ui, sans-serif; cursor: pointer; }
+.ops-control-fields select:focus-visible { outline: 2px solid var(--ops-accent); outline-offset: 2px; border-color: var(--ops-accent); }
+.ops-control-settings > button { justify-self: start; }
+.ops-control-limits { display: grid; gap: 0.25rem; margin: 0; padding: 0.75rem 0 0 1rem; border-top: 1px solid var(--ops-line); color: var(--ops-muted); font-size: 0.72rem; line-height: 1.5; }
+.ops-control-limits b { color: var(--ops-soft); font-weight: 600; }
+.ops-control-status { display: grid; gap: 0.25rem; padding: 0.75rem; border: 1px solid var(--ops-line-strong); border-radius: 0.5rem; background: #f9fafb; font-size: 0.78rem; }
+.ops-control-status[data-state="done"] { border-color: #abefc6; background: var(--ops-green-soft); }
+.ops-control-status[data-state="rejected"] { border-color: #fda29b; background: var(--ops-red-soft); }
+.ops-control-status[data-state="unknown"] { border-color: #fedf89; background: var(--ops-amber-soft); }
+.ops-control-status p { margin: 0; line-height: 1.5; }
+.ops-control-status button { justify-self: start; }
+@media (min-width: 40rem) {
+  .ops-control-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ops-control-fields select { font-size: 0.82rem; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .ops-control-confirm { animation: ops-control-in 160ms cubic-bezier(0.23, 1, 0.32, 1); }
+  @keyframes ops-control-in { from { opacity: 0; translate: 0 -4px; } }
+}

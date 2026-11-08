@@ -1,0 +1,45 @@
+.ops-kpis.gh-kpis { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.ops-shell .gh-kpis .ops-kpi:disabled { opacity: 1; cursor: default; }
+.ops-shell .gh-kpis .ops-kpi[data-tone="red"] { background: #fef3f2; }
+.ops-shell .gh-kpis .ops-kpi[data-tone="red"]:hover { background: #fee4e2; }
+.ops-shell .gh-kpis .ops-kpi[data-tone="amber"] { background: var(--ops-amber-soft); }
+.gh-sync { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.75rem; margin: -0.5rem 0 0; font-size: 0.78rem; color: var(--ops-faint); }
+.ops-shell .gh-refresh { min-height: 1.75rem; padding: 0.25rem 0.65rem; margin-left: auto; font-size: 0.75rem; }
+.gh-tags { display: flex; flex-wrap: wrap; gap: 0.375rem; margin: 0.75rem 0 0; }
+.gh-tag { display: inline-flex; align-items: center; height: 1.375rem; padding: 0 0.5rem; border-radius: 999px; font-size: 0.72rem; font-weight: 600; background: #f2f4f7; color: #475467; }
+.gh-tag[data-tone="red"] { background: #fef3f2; color: #b42318; }
+.gh-tag[data-tone="amber"] { background: #fffaeb; color: #b54708; }
+.gh-tag[data-tone="green"] { background: #ecfdf3; color: #067647; }
+.gh-tag[data-tone="blue"] { background: #eff8ff; color: #175cd3; }
+.gh-detail { display: grid; gap: 0.25rem; margin: 1rem 0; }
+.gh-line { margin: 0; font-size: 0.875rem; line-height: 1.5; color: var(--ops-soft); overflow-wrap: anywhere; }
+.gh-confirm { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 0.45rem; font-size: 0.8rem; font-weight: 600; color: var(--ops-text); }
+
+@media (max-width: 760px) {
+  .ops-kpis.gh-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ops-kpis.gh-kpis .ops-kpi:last-child { grid-column: 1 / -1; }
+  .ops-shell .gh-refresh { margin-left: 0; }
+}
+
+.ops-group h3:has(.gh-repo-head) { padding: 0.75rem 0.65rem 0.25rem; letter-spacing: 0; text-transform: none; }
+.ops-group:has(.gh-repo-head) + .ops-group { margin-top: 0.25rem; border-top: 1px solid var(--ops-line); }
+.gh-repo-head { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 0.5rem; min-width: 0; width: 100%; }
+.gh-repo-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.8rem; font-weight: 700; color: var(--ops-text); }
+.gh-repo-owner { font-size: 0.7rem; font-weight: 500; color: var(--ops-faint); }
+.gh-minis { display: inline-flex; flex-wrap: wrap; gap: 0.25rem; margin-left: auto; }
+.gh-mini { display: inline-flex; align-items: center; height: 1.25rem; padding: 0 0.4rem; border-radius: 999px; background: #f2f4f7; color: #475467; font-size: 0.66rem; font-weight: 650; white-space: nowrap; }
+.gh-mini[data-kind="ci"], .gh-mini[data-kind="security"] { background: #fef3f2; color: #b42318; }
+.gh-mini[data-kind="pr"], .gh-mini[data-kind="issue"] { background: #fffaeb; color: #b54708; }
+.gh-kind { font-weight: 600; color: var(--ops-soft); }
+.gh-kind[data-kind="ci"], .gh-kind[data-kind="security"] { color: #b42318; }
+
+.gh-repos { display: flex; flex-direction: column; gap: 0.25rem; padding-top: 0.5rem; }
+.ops-shell .gh-repo { align-items: center; padding: 0.625rem 0.65rem; }
+.ops-shell .gh-repo .ops-led { margin-top: 0; }
+.gh-repo-label { flex: 1; min-width: 0; display: flex; align-items: baseline; gap: 0.5rem; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 0.85rem; font-weight: 600; }
+.gh-repo-label small { font-size: 0.7rem; font-weight: 500; color: var(--ops-faint); }
+.gh-repo-count { flex: none; min-width: 1.5rem; padding: 0.1rem 0.4rem; box-sizing: border-box; text-align: center; border-radius: 999px; background: var(--ops-hover); color: var(--ops-soft); font-size: 0.72rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.gh-repo-title { padding: 0 0.65rem 0.75rem; margin: 0 0 0.5rem; border-bottom: 1px solid var(--ops-line); }
+.gh-repo-title .gh-repo-name { font-size: 1rem; }
+.gh-items { display: flex; flex-direction: column; gap: 0.25rem; }
+.ops-shell .gh-back { margin: 0 0 1rem -0.3rem; padding: 0.3rem; border: 0; box-shadow: none; background: transparent; color: var(--ops-accent); }

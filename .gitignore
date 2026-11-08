@@ -1,0 +1,8 @@
+node_modules
+dist
+.env
+.env.*
+*.log
+package-lock.json
+!.env.example
+.playwright-mcp

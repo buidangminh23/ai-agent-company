@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>AI Agent Company</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="/src/style.css" />
+</head>
+<body>
+<main id="stage" aria-labelledby="office-title">
+  <h1 id="office-title" class="sr-only">Văn phòng AI Agent Company</h1>
+  <header class="brand"><b>AI AGENT COMPANY</b><span id="live" data-state="off">Đang nối hub…</span></header>
+  <button id="home" class="home" aria-label="Về góc nhìn gốc" title="Về toàn cảnh"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 7.5 8 3l5.5 4.5V13.5H9.8V10H6.2v3.5H2.5z"/></svg></button>
+  <aside id="agent-card" class="agent-card" role="region" aria-label="Theo dõi agent" hidden></aside>
+  <div id="machine-pop" class="machine-pop" hidden></div>
+</main>
+<script type="module" src="/src/main.ts"></script>
+</body>
+</html>
