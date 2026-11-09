@@ -54,4 +54,6 @@ jobs:
             exit 0
           fi
           git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -qm "docs: show badges whose statistics are now available"
+          git fetch -q origin main
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" rebase -q origin/main
           git push origin HEAD:refs/heads/main
