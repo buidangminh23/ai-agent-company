@@ -75,8 +75,7 @@ async function ghApi(endpoint) {
     const { stdout } = await execute("gh", ["api", "-H", "Accept: application/vnd.github+json", endpoint], { timeout: 60000, windowsHide: true });
     return JSON.parse(stdout);
   } catch (error) {
-    const detail = String(error?.stderr ?? "").trim().split(/?
-/).at(-1);
+    const detail = String(error?.stderr ?? "").trim().split(/\r?\n/).at(-1);
     throw new Error(`gh api ${endpoint} failed${detail ? `: ${detail}` : ""}`);
   }
 }
