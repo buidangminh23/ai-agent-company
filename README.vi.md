@@ -2,6 +2,7 @@
 
 <p align="center">
   <a href="https://www.npmjs.com/package/@minhspark/ai-agent-company"><img src="https://img.shields.io/npm/v/@minhspark/ai-agent-company?logo=npm&amp;color=CB3837" height="20" alt="npm" /></a>
+  <a href="https://github.com/buidangminh23/ai-agent-company/tree/analytics"><img src="https://raw.githubusercontent.com/buidangminh23/ai-agent-company/analytics/stats-github-views.svg" height="20" alt="GitHub views / 14 days" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/github/license/buidangminh23/ai-agent-company" height="20" alt="license" /></a>
 </p>
 
