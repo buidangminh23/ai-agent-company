@@ -71,8 +71,14 @@ export async function npmBadges({ fetcher = fetch, now = Date.now(), pkg = PACKA
 }
 
 async function ghApi(endpoint) {
-  const { stdout } = await execute("gh", ["api", "-H", "Accept: application/vnd.github+json", endpoint], { timeout: 60000, windowsHide: true });
-  return JSON.parse(stdout);
+  try {
+    const { stdout } = await execute("gh", ["api", "-H", "Accept: application/vnd.github+json", endpoint], { timeout: 60000, windowsHide: true });
+    return JSON.parse(stdout);
+  } catch (error) {
+    const detail = String(error?.stderr ?? "").trim().split(/?
+/).at(-1);
+    throw new Error(`gh api ${endpoint} failed${detail ? `: ${detail}` : ""}`);
+  }
 }
 
 export async function viewsBadge({ gh = ghApi, repo = REPO } = {}) {
