@@ -1,5 +1,9 @@
 <h1 align="center">AI Agent Company</h1>
 
+<p align="center">
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/buidangminh23/ai-agent-company" height="20" alt="license" /></a>
+</p>
+
 ![AI Agent Company: the 3D office with AI agents at their desks](docs/screenshot.png)
 
 A 3D tabletop office for watching and steering the Claude Code / Claude Desktop, Codex Desktop and Antigravity sessions running on one or more machines. Each agent session is a voxel character seated at a desk for its kind of work. When an agent needs your decision, its character queues at the CEO desk and you approve it right in the browser.
@@ -28,6 +32,16 @@ Every number is real data read from your machines. A source that is not configur
 - Optional: a signed-in [GitHub CLI](https://cli.github.com) for the GitHub tab; [Tailscale](https://tailscale.com) for several machines; [Quota Control](https://github.com/buidangminh23/quota-control) for the AI quota tab; [PowerShell 7](https://github.com/PowerShell/PowerShell) for the setup scripts.
 
 ## Quick start
+
+From npm, without cloning (Node.js 23.6 or later):
+
+```bash
+npx @minhspark/ai-agent-company demo
+```
+
+`npx @minhspark/ai-agent-company` starts the hub with the `.env` in the current folder; `npx @minhspark/ai-agent-company install-claude-hook` installs the Claude approval hook. Install it globally with `npm install -g @minhspark/ai-agent-company` to get the `ai-agent-company` command.
+
+From source:
 
 ```bash
 pnpm install
@@ -103,6 +117,8 @@ On every machine that runs Claude Code, install the hook once:
 ```bash
 node server/claude-hook/install.mjs
 ```
+
+With the npm package: `ai-agent-company install-claude-hook`.
 
 Preview with `--dry-run`, check with `--status`, remove with `--uninstall`. The script backs up `~/.claude/settings.json` before changing it.
 

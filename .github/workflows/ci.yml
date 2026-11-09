@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - run: pnpm test
+      - name: Check the npm package contents
+        run: |
+          npm pack --dry-run --ignore-scripts 2>&1 | tee pack.txt
+          for file in bin/ai-agent-company.mjs dist/index.html dist-server/hub.mjs server/claude-hook/hook.mjs server/claude-hook/install.mjs; do
+            grep -q " $file$" pack.txt || { echo "missing $file in the npm package"; exit 1; }
+          done
+      - name: Start the packaged hub in demo mode
+        run: |
+          node bin/ai-agent-company.mjs demo &
+          for attempt in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:5190/api/snapshot > snapshot.json; then break; fi
+            sleep 1
+          done
+          grep -q '"agents"' snapshot.json
+          curl -fsS http://127.0.0.1:5190/ | grep -q '<div'

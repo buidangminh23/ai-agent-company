@@ -1,5 +1,9 @@
 <h1 align="center">AI Agent Company</h1>
 
+<p align="center">
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/buidangminh23/ai-agent-company" height="20" alt="license" /></a>
+</p>
+
 ![AI Agent Company: văn phòng 3D với các agent AI ngồi đúng bàn](docs/screenshot.png)
 
 Văn phòng 3D kiểu sa bàn để theo dõi và điều hành các phiên Claude Code / Claude Desktop, Codex Desktop và Antigravity đang chạy trên một hoặc nhiều máy. Mỗi phiên agent là một nhân vật voxel ngồi đúng bàn theo vai việc; khi agent cần bạn quyết định, nhân vật xếp hàng trước bàn CEO và bạn duyệt ngay trên web.
@@ -28,6 +32,16 @@ Mọi số liệu là dữ liệu thật đọc từ máy của bạn. Nguồn n
 - Tuỳ chọn: [GitHub CLI](https://cli.github.com) đã đăng nhập cho tab GitHub; [Tailscale](https://tailscale.com) nếu dùng nhiều máy; [Quota Control](https://github.com/buidangminh23/quota-control) cho tab Hạn mức; [PowerShell 7](https://github.com/PowerShell/PowerShell) cho các script cài đặt.
 
 ## Chạy nhanh
+
+Cài từ npm, không cần clone (Node.js 23.6 trở lên):
+
+```bash
+npx @minhspark/ai-agent-company demo
+```
+
+`npx @minhspark/ai-agent-company` chạy hub với file `.env` ở thư mục hiện tại; `npx @minhspark/ai-agent-company install-claude-hook` cài hook duyệt Claude. Cài toàn cục bằng `npm install -g @minhspark/ai-agent-company` để có lệnh `ai-agent-company`.
+
+Chạy từ mã nguồn:
 
 ```bash
 pnpm install
@@ -104,6 +118,8 @@ Trên mỗi máy chạy Claude Code, cài hook một lần:
 ```bash
 node server/claude-hook/install.mjs
 ```
+
+Với gói npm: `ai-agent-company install-claude-hook`.
 
 Xem trước bằng `--dry-run`, kiểm tra bằng `--status`, gỡ bằng `--uninstall`. Script sao lưu `~/.claude/settings.json` trước khi sửa.
 

@@ -6,3 +6,4 @@ dist
 package-lock.json
 !.env.example
 .playwright-mcp
+dist-server

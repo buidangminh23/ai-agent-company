@@ -1,21 +1,60 @@
 {
-  "name": "ai-agent-company",
-  "private": true,
+  "name": "@minhspark/ai-agent-company",
   "version": "1.0.0",
+  "description": "A 3D office for watching and approving the Claude Code, Codex and Antigravity agents running on your machines.",
   "type": "module",
+  "license": "MIT",
+  "author": "Minh Spark",
+  "homepage": "https://github.com/buidangminh23/ai-agent-company#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/buidangminh23/ai-agent-company.git"
+  },
+  "bugs": {
+    "url": "https://github.com/buidangminh23/ai-agent-company/issues"
+  },
+  "keywords": [
+    "claude-code",
+    "codex",
+    "antigravity",
+    "ai-agents",
+    "dashboard",
+    "threejs",
+    "agent-monitor"
+  ],
+  "engines": {
+    "node": ">=23.6"
+  },
+  "bin": {
+    "ai-agent-company": "bin/ai-agent-company.mjs"
+  },
+  "files": [
+    "bin",
+    "dist",
+    "dist-server",
+    "server/claude-hook/hook.mjs",
+    "server/claude-hook/install.mjs",
+    ".env.example",
+    "README.md",
+    "README.vi.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
   "packageManager": "pnpm@12.16.1",
   "scripts": {
-    "test": "node --test server/access.test.ts server/operations.test.ts server/sources/activity.test.ts server/sources/youtube.test.ts server/sources/youtube-account.test.ts server/sources/automation.test.ts server/sources/system.test.ts shared/system.test.ts src/system-view.test.ts server/sources/messages.test.ts server/sources/inbox.test.ts server/sources/local-events.test.ts server/sources/imap-idle.test.ts shared/tools.test.ts shared/training.test.ts server/replies.test.ts server/reply-http.test.ts server/reply-adapters/codex.test.ts src/scene/ceo-timeline.test.ts src/meeting.test.ts src/mail-labels.test.ts shared/github.test.ts shared/todos.test.ts server/sources/todos.test.ts server/sources/quota-app.test.ts server/sources/external.test.ts shared/messages.test.ts src/courier.test.ts src/communications-view.test.ts server/dispatch.test.ts server/dispatch-http.test.ts src/agents.test.ts src/scene/coffee-timeline.test.ts src/scene/billiards.test.ts src/scene/eight-ball.test.ts src/scene/drink-bar.test.ts src/scene/drink-fridge.test.ts src/scene/lounge-games.test.ts server/controls.test.ts server/control-http.test.ts server/claude-hook.test.ts server/reply-adapters/claude.test.ts server/control-adapters/claude.test.ts server/control-adapters/codex.test.ts src/replies.test.ts src/decision-replies.test.ts src/press-guard.test.ts src/agent-controls.test.ts src/youtube-controls.test.ts server/dispatch-bridge.test.ts shared/i18n.test.ts server/demo.test.ts",
+    "test": "node --test server/access.test.ts server/operations.test.ts server/sources/activity.test.ts server/sources/youtube.test.ts server/sources/youtube-account.test.ts server/sources/automation.test.ts server/sources/system.test.ts shared/system.test.ts src/system-view.test.ts server/sources/messages.test.ts server/sources/inbox.test.ts server/sources/local-events.test.ts server/sources/imap-idle.test.ts shared/tools.test.ts shared/training.test.ts server/replies.test.ts server/reply-http.test.ts server/reply-adapters/codex.test.ts src/scene/ceo-timeline.test.ts src/meeting.test.ts src/mail-labels.test.ts shared/github.test.ts shared/todos.test.ts server/sources/todos.test.ts server/sources/quota-app.test.ts server/sources/external.test.ts shared/messages.test.ts src/courier.test.ts src/communications-view.test.ts server/dispatch.test.ts server/dispatch-http.test.ts src/agents.test.ts src/scene/coffee-timeline.test.ts src/scene/billiards.test.ts src/scene/eight-ball.test.ts src/scene/drink-bar.test.ts src/scene/drink-fridge.test.ts src/scene/lounge-games.test.ts server/controls.test.ts server/control-http.test.ts server/claude-hook.test.ts server/reply-adapters/claude.test.ts server/control-adapters/claude.test.ts server/control-adapters/codex.test.ts src/replies.test.ts src/decision-replies.test.ts src/press-guard.test.ts src/agent-controls.test.ts src/youtube-controls.test.ts server/dispatch-bridge.test.ts shared/i18n.test.ts server/demo.test.ts scripts/refresh-badges.test.mjs",
     "dev": "vite --port 5180 --strictPort",
-    "build": "tsc --noEmit && vite build",
-    "preview": "vite preview --port 5181"
-  },
-  "dependencies": {
-    "three": "^0.186.1"
+    "build": "tsc --noEmit && vite build && vite build --config vite.server.config.ts",
+    "preview": "vite preview --port 5181",
+    "prepack": "pnpm build"
   },
   "devDependencies": {
     "@types/node": "^26.6.6",
     "@types/three": "^0.186.0",
+    "three": "^0.186.1",
     "typescript": "^7.0.2",
     "vite": "^8.3.5"
   }

@@ -1,0 +1,47 @@
+name: Badge statistics
+
+on:
+  schedule:
+    - cron: '23 * * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: badge-statistics
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - name: Check out the analytics branch
+        run: |
+          if git ls-remote --exit-code --heads origin analytics > /dev/null; then
+            git fetch --depth 1 origin analytics
+            git worktree add analytics FETCH_HEAD
+          else
+            git worktree add --detach analytics
+            git -C analytics checkout --orphan analytics
+            git -C analytics rm -rfq .
+          fi
+      - name: Refresh badge statistics
+        env:
+          GH_TOKEN: ${{ secrets.ANALYTICS_TOKEN || github.token }}
+        run: node scripts/refresh-badges.mjs analytics
+      - name: Publish changed badges
+        working-directory: analytics
+        run: |
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No badge changed"
+            exit 0
+          fi
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -qm "chore: refresh badge statistics"
+          git push origin HEAD:refs/heads/analytics

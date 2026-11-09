@@ -165,10 +165,6 @@ settings:
 importers:
 
   .:
-    dependencies:
-      three:
-        specifier: ^0.186.1
-        version: 0.186.1
     devDependencies:
       '@types/node':
         specifier: ^26.6.6
@@ -176,6 +172,9 @@ importers:
       '@types/three':
         specifier: ^0.186.0
         version: 0.186.0
+      three:
+        specifier: ^0.186.1
+        version: 0.186.1
       typescript:
         specifier: ^7.0.2
         version: 7.0.2
