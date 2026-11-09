@@ -45,3 +45,13 @@ jobs:
           fi
           git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -qm "chore: refresh badge statistics"
           git push origin HEAD:refs/heads/analytics
+      - name: Show new badges in the README once their source has data
+        run: |
+          node scripts/add-ready-badges.mjs analytics
+          git add README.md README.vi.md
+          if git diff --cached --quiet; then
+            echo "README badges are up to date"
+            exit 0
+          fi
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -qm "docs: show badges whose statistics are now available"
+          git push origin HEAD:refs/heads/main
