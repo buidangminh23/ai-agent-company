@@ -1,6 +1,7 @@
 <h1 align="center">AI Agent Company</h1>
 
 <p align="center">
+  <a href="https://www.npmjs.com/package/@minhspark/ai-agent-company"><img src="https://img.shields.io/npm/v/@minhspark/ai-agent-company?logo=npm&amp;color=CB3837" height="20" alt="npm" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/github/license/buidangminh23/ai-agent-company" height="20" alt="license" /></a>
 </p>
 

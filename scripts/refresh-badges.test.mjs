@@ -33,7 +33,14 @@ test("npmBadges sums every day since the package was created", async () => {
 
 test("npmBadges fails instead of drawing a badge for an unpublished package", async () => {
   const fetcher = async () => ({ ok: false, status: 404 });
-  await assert.rejects(npmBadges({ fetcher }), /HTTP 404/);
+  await assert.rejects(npmBadges({ fetcher }), /not published on npm/);
+});
+
+test("npmBadges explains when npm has not computed download statistics yet", async () => {
+  const fetcher = async (url) => url.startsWith("https://registry.npmjs.org/")
+    ? { ok: true, status: 200, json: async () => ({ time: { created: "2026-11-09T02:09:19Z" } }) }
+    : { ok: false, status: 404 };
+  await assert.rejects(npmBadges({ fetcher, now: Date.parse("2026-11-09T03:00:00Z") }), /no download statistics/);
 });
 
 test("viewsBadge reports the GitHub traffic window", async () => {

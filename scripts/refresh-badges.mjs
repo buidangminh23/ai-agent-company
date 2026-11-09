@@ -41,25 +41,28 @@ export function npmWindows(createdAt, now) {
   return windows;
 }
 
-async function json(fetcher, url) {
+async function json(fetcher, url, notFound = `${url} returned HTTP 404`) {
   const response = await fetcher(url, { signal: AbortSignal.timeout(30000) });
+  if (response.status === 404) throw new Error(notFound);
   if (!response.ok) throw new Error(`${url} returned HTTP ${response.status}`);
   return response.json();
 }
 
+const NO_STATS = "npm has no download statistics for this package yet; new packages get them about a day after publishing";
+
 const sum = (rows) => rows.reduce((total, row) => total + row.downloads, 0);
 
 export async function npmBadges({ fetcher = fetch, now = Date.now(), pkg = PACKAGE } = {}) {
-  const meta = await json(fetcher, `https://registry.npmjs.org/${pkg.replace("/", "%2F")}`);
+  const meta = await json(fetcher, `https://registry.npmjs.org/${pkg.replace("/", "%2F")}`, "the package is not published on npm");
   const createdAt = meta.time?.created;
   if (!createdAt) throw new Error("npm registry did not return a creation date");
   let total = 0;
   for (const window of npmWindows(createdAt, now)) {
-    const data = await json(fetcher, `https://api.npmjs.org/downloads/range/${window}/${pkg}`);
+    const data = await json(fetcher, `https://api.npmjs.org/downloads/range/${window}/${pkg}`, NO_STATS);
     if (!Array.isArray(data.downloads)) throw new Error("npm range response has no downloads");
     total += sum(data.downloads);
   }
-  const month = await json(fetcher, `https://api.npmjs.org/downloads/range/last-month/${pkg}`);
+  const month = await json(fetcher, `https://api.npmjs.org/downloads/range/last-month/${pkg}`, NO_STATS);
   if (!Array.isArray(month.downloads)) throw new Error("npm last-month response has no downloads");
   return {
     "stats-npm-downloads.svg": renderBadge("npm downloads", formatCount(total), "#CB3837", `All downloads since ${isoDay(createdAt)} UTC`),
@@ -103,7 +106,6 @@ export async function refreshBadges(directory, sources = { npm: () => npmBadges(
 
 const HINTS = {
   views: " GitHub traffic needs the ANALYTICS_TOKEN secret (fine-grained token, Administration: read).",
-  npm: " The package must be published to npm first.",
 };
 
 if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
